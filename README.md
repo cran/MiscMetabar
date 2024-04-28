@@ -21,19 +21,19 @@ paper](https://doi.org/10.21105/joss.06038) in the Journal Of Open
 Softwares.
 
 Biological studies, especially in ecology, health sciences and taxonomy,
-need to describe the biological composition of samples. During the last
+need to describe the biological composition of samples. Over the last
 twenty years, (i) the development of DNA sequencing, (ii) reference
 databases, (iii) high-throughput sequencing (HTS), and (iv)
-bioinformatics resources have allowed the description of biological
+bioinformatics resources have enabled the description of biological
 communities through metabarcoding. Metabarcoding involves the sequencing
 of millions (*meta*-) of short regions of specific DNA (*-barcoding*,
 Valentini, Pompanon, and Taberlet (2009)) often from environmental
 samples (eDNA, Taberlet et al. (2012)) such as human stomach contents,
-lake water, soil and air.
+lake water, soil, and air.
 
 `MiscMetabar` aims to facilitate the **description**,
 **transformation**, **exploration** and **reproducibility** of
-metabarcoding analysis using R. The development of `MiscMetabar` relies
+metabarcoding analyses using R. The development of `MiscMetabar` relies
 heavily on the R packages
 [`dada2`](https://benjjneb.github.io/dada2/index.html) (Callahan et al.
 2016), [`phyloseq`](https://joey711.github.io/phyloseq/) (McMurdie and
@@ -42,12 +42,14 @@ Holmes 2013) and [`targets`](https://books.ropensci.org/targets/)
 
 ## Installation
 
-There is no CRAN version of MiscMetabar for now (work in progress). As
-MiscMetabar heavily relies on two bioconductor packages (dada and
-phyloseq), we need to first install those 2 packages using BiocManager.
+A CRAN version of MiscMetabar is available.
 
-You can install the stable version from [GitHub](https://github.com/)
-with:
+``` r
+install.packages("MiscMetabar")
+```
+
+You can also install the stable development version from
+[GitHub](https://github.com/) with:
 
 ``` r
 if (!require("devtools", quietly = TRUE)) {
@@ -56,7 +58,7 @@ if (!require("devtools", quietly = TRUE)) {
 devtools::install_github("adrientaudiere/MiscMetabar")
 ```
 
-You can install the development version from
+You can install the unstable development version from
 [GitHub](https://github.com/) with:
 
 ``` r
@@ -72,16 +74,15 @@ See articles in the
 [MiscMetabar](https://adrientaudiere.github.io/MiscMetabar/) website for
 more examples.
 
-For an introduction to metabarcoding in R, Please visite the [state of
-the
+For an introduction to metabarcoding in R, see the [state of the
 field](https://adrientaudiere.github.io/MiscMetabar/articles/states_of_fields_in_R.html)
-articles. The [import, export and
-track](https://adrientaudiere.github.io/MiscMetabar/articles/import_export_track.html)
-article explains how import and export `phyloseq` object. Its also show
-how to summarize useful information (number of sequences, samples and
-clusters) accross bioinformatic pipelines. The article [explore
+article. The [import, export and
+tracking](https://adrientaudiere.github.io/MiscMetabar/articles/import_export_track.html)
+article explains how to import and export `phyloseq` objects. It also
+shows how to summarize useful information (number of sequences, samples
+and clusters) across bioinformatic pipelines. The article [explore
 data](https://adrientaudiere.github.io/MiscMetabar/articles/explore_data.html)
-takes a closer look to different way of explore samples and taxonomical
+takes a closer look at different ways to explore samples and taxonomic
 data from `phyloseq` object.
 
 If you are interested in ecological metrics, see the articles describing
@@ -90,7 +91,7 @@ and
 [beta-diversity](https://adrientaudiere.github.io/MiscMetabar/articles/beta-div.html)
 analysis. The article [filter taxa and
 samples](https://adrientaudiere.github.io/MiscMetabar/articles/filter.html)
-describes some data-filtering processes using MiscMetabar and the
+describes some data filtering processes using MiscMetabar and the
 [reclustering](https://adrientaudiere.github.io/MiscMetabar/articles/Reclustering.html)
 tutorial introduces the different way of clustering already-clustered
 OTU/ASV. The article
@@ -98,7 +99,7 @@ OTU/ASV. The article
 explore the dataset from Tengeler et al. (2020) using some MiscMetabar
 functions.
 
-For developers, I also wrote a article describing som [rules of
+For developers, I also wrote an article describing some [rules of
 codes](https://adrientaudiere.github.io/MiscMetabar/articles/Rules.html).
 
 ### Summarize a physeq object
@@ -116,31 +117,15 @@ summary_plot_pq(data_fungi)
 ### Alpha-diversity analysis
 
 ``` r
-p <- MiscMetabar::hill_pq(data_fungi, variable = "Height")
+p <- MiscMetabar::hill_pq(data_fungi, fact = "Height")
 p$plot_Hill_0
+#> NULL
 ```
-
-<div class="figure">
-
-<img src="man/figures/README-unnamed-chunk-4-1.png" alt="Hill number 1" width="100%" />
-<p class="caption">
-Hill number 1
-</p>
-
-</div>
 
 ``` r
 p$plot_tuckey
+#> NULL
 ```
-
-<div class="figure">
-
-<img src="man/figures/README-unnamed-chunk-5-1.png" alt="Result of the Tuckey post-hoc test" width="100%" />
-<p class="caption">
-Result of the Tuckey post-hoc test
-</p>
-
-</div>
 
 ### Beta-diversity analysis
 
@@ -153,37 +138,37 @@ ggvenn_pq(data_fungi, fact = "Height") +
   labs(title = "Share number of ASV among Height in tree")
 ```
 
-<img src="man/figures/README-unnamed-chunk-6-1.png" width="100%" />
+<img src="man/figures/README-unnamed-chunk-7-1.png" width="100%" />
 
-### Note for non-linux users
+### Note for non-Linux users
 
-Some functions may not work on windows (*e.g.* \[track_wflow()\],
-\[cutadapt_remove_primers()\], \[krona()\], \[vsearch_clustering()\],
-…). A solution is to exploit docker container, for example the using the
-great [rocker project](https://rocker-project.org/).
+Some functions may not work on Windows (*e.g.* `track_wflow()`,
+`cutadapt_remove_primers()`, `krona()`, `vsearch_clustering()`, …). A
+solution is to exploit docker container, for example the using the great
+[rocker project](https://rocker-project.org/).
 
 Here is a list of functions with some limitations or not working at all
-on windows OS:
+on Windows OS:
 
-- \[build_phytree_pq()\]
-- \[count_seq()\]
-- \[cutadapt_remove_primers()\]
-- \[krona()\]
-- \[merge_krona()\]
-- \[multipatt_pq()\]
-- \[plot_tsne_pq()\]
-- \[rotl_pq()\]
-- \[save_pq()\]
-- \[tax_datatable()\]
-- \[track_wkflow()\]
-- \[track_wkflow_samples()\]
-- \[tsne_pq()\]
-- \[venn_pq()\]
+- `build_phytree_pq()`
+- `count_seq()`
+- `cutadapt_remove_primers()`
+- `krona()`
+- `merge_krona()`
+- `multipatt_pq()`
+- `plot_tsne_pq()`
+- `rotl_pq()`
+- `save_pq()`
+- `tax_datatable()`
+- `track_wkflow()`
+- `track_wkflow_samples()`
+- `tsne_pq()`
+- `venn_pq()`
 
 MiscMetabar is developed under Linux and the vast majority of functions
-may works on Unix system, but its functionning is not test under iOS.
+may works on Unix system, but its functionning is not tested under iOS.
 
-### Installation of other softwares for debian Linux distributions
+### Installation of other softwares for Debian Linux distributions
 
 If you encounter any errors or have any questions about the installation
 of these softwares, please visit their dedicated websites.

@@ -6,24 +6,37 @@
 \usage{
 hill_pq(
   physeq,
-  variable,
+  fact = NULL,
+  variable = NULL,
+  hill_scales = c(0, 1, 2),
   color_fac = NA,
   letters = FALSE,
   add_points = FALSE,
   add_info = TRUE,
   one_plot = FALSE,
   plot_with_tuckey = TRUE,
-  correction_for_sample_size = TRUE
+  correction_for_sample_size = TRUE,
+  na_remove = TRUE
 )
 }
 \arguments{
 \item{physeq}{(required): a \code{\link{phyloseq-class}} object obtained
 using the \code{phyloseq} package.}
 
-\item{variable}{(required): The variable to test. Must be present in
+\item{fact}{(required): The variable to test. Must be present in
 the \code{sam_data} slot of the physeq object.}
 
-\item{color_fac}{(optional): The variable to color the barplot}
+\item{variable}{: Alias for factor. Kept only for backward compatibility.}
+
+\item{hill_scales}{(a vector of integer) The list of q values to compute
+the hill number H^q. If Null, no hill number are computed. Default value
+compute the Hill number 0 (Species richness), the Hill number 1
+(exponential of Shannon Index) and the Hill number 2 (inverse of Simpson
+Index).}
+
+\item{color_fac}{(optional): The variable to color the barplot. For ex.
+same as fact. Not very useful because ggplot2 plot colors can be
+change using \code{scale_color_XXX()} function.}
 
 \item{letters}{(optional, default=FALSE): If set to TRUE, the plot
 show letters based on p-values for comparison. Use the
@@ -48,7 +61,14 @@ plot_with_tuckey = FALSE}
 
 \item{correction_for_sample_size}{(logical, default TRUE) This function
 use a sqrt of the read numbers in the linear model in order to
-correct for uneven sampling depth.}
+correct for uneven sampling depth in the Tuckey TEST. This params
+do not change value of Hill number but only the test associated
+values (including the pvalues). To rarefy samples, you may use the
+function \code{\link[phyloseq:rarefy_even_depth]{phyloseq::rarefy_even_depth()}}.}
+
+\item{na_remove}{(logical, default TRUE) Do we remove samples with NA in
+the factor fact ? Note that na_remove is always TRUE when using
+letters = TRUE}
 }
 \value{
 Either an unique ggplot2 object (if one_plot is TRUE) or
@@ -65,25 +85,45 @@ against the variable
 }
 \description{
 \ifelse{html}{\href{https://lifecycle.r-lib.org/articles/stages.html#experimental}{\figure{lifecycle-experimental.svg}{options: alt='[Experimental]'}}}{\strong{[Experimental]}}
-Note that this function use a sqrt of the read numbers in the linear
-model in order to correct for uneven sampling depth.
+Hill numbers are the number of equiprobable species giving the same
+diversity value as the observed distribution. The Hill number 0
+correspond to Species richness), the Hill number 1 to
+the exponential of Shannon Index and the Hill number 2 to the inverse
+of Simpson Index)
+
+Note that (if correction_for_sample_size is TRUE, default behavior)
+this function use a sqrt of the read numbers in the linear
+model in order to correct for uneven sampling depth. This correction
+is only done before tuckey HSD plot and do not change the hill number
+computed.
 }
 \examples{
 
-p <- hill_pq(data_fungi_mini, "Height")
+p <- hill_pq(data_fungi_mini, "Height", hill_scales = 1:2)
 p_h1 <- p[[1]] + theme(legend.position = "none")
 p_h2 <- p[[2]] + theme(legend.position = "none")
-p_h3 <- p[[3]] + theme(legend.position = "none")
-multiplot(plotlist = list(p_h1, p_h2, p_h3, p[[4]]), cols = 4)
-
+multiplot(plotlist = list(p_h1, p_h2, p[[3]]), cols = 4)
 \donttest{
-# Artificially modify data_fungi to force alpha-diversity effect
-data_fungi_modif <- clean_pq(subset_samples_pq(data_fungi, !is.na(data_fungi@sam_data$Height)))
-data_fungi_modif@otu_table[data_fungi_modif@sam_data$Height == "High", ] <-
-  data_fungi_modif@otu_table[data_fungi_modif@sam_data$Height == "High", ] +
-  sample(c(rep(0, ntaxa(data_fungi_modif) / 2), rep(100, ntaxa(data_fungi_modif) / 2)))
-p2 <- hill_pq(data_fungi_modif, "Height", letters = TRUE)
+if (requireNamespace("multcompView")) {
+  p2 <- hill_pq(data_fungi, "Time",
+    correction_for_sample_size = FALSE,
+    letters = TRUE, add_points = TRUE, plot_with_tuckey = FALSE
+  )
+  if (requireNamespace("patchwork")) {
+    patchwork::wrap_plots(p2, guides = "collect")
+  }
+  # Artificially modify data_fungi to force alpha-diversity effect
+  data_fungi_modif <- clean_pq(subset_samples_pq(data_fungi, !is.na(data_fungi@sam_data$Height)))
+  data_fungi_modif@otu_table[data_fungi_modif@sam_data$Height == "High", ] <-
+    data_fungi_modif@otu_table[data_fungi_modif@sam_data$Height == "High", ] +
+    sample(c(rep(0, ntaxa(data_fungi_modif) / 2), rep(100, ntaxa(data_fungi_modif) / 2)))
+  p3 <- hill_pq(data_fungi_modif, "Height", letters = TRUE)
+  p3[[1]]
 }
+}
+}
+\seealso{
+\code{\link[=psmelt_samples_pq]{psmelt_samples_pq()}} and \code{\link[=ggbetween_pq]{ggbetween_pq()}}
 }
 \author{
 Adrien Taudière

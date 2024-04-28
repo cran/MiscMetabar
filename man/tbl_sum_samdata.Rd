@@ -17,7 +17,7 @@ e.g. samples names ?}
 \item{...}{Others arguments pass on to \code{\link[gtsummary:tbl_summary]{gtsummary::tbl_summary()}}.}
 }
 \value{
-a physeq object with a larger slot tax_table
+A new \code{\link{phyloseq-class}} object with a larger slot tax_table
 }
 \description{
 \ifelse{html}{\href{https://lifecycle.r-lib.org/articles/stages.html#experimental}{\figure{lifecycle-experimental.svg}{options: alt='[Experimental]'}}}{\strong{[Experimental]}}
@@ -31,19 +31,22 @@ Please make a reference to \code{gtsummary::tbl_summary()} if you
 use this function.
 }
 \examples{
-tbl_sum_samdata(data_fungi) \%>\%
-  gtsummary::as_kable()
+if (requireNamespace("gtsummary")) {
+  tbl_sum_samdata(data_fungi) \%>\%
+    gtsummary::as_kable()
 
-summary_samdata <- tbl_sum_samdata(data_fungi,
-  include = c("Time", "Height"),
-  type = list(Time ~ "continuous2", Height ~ "categorical"),
-  statistic = list(Time ~ c("{median} ({p25}, {p75})", "{min}, {max}"))
-)
+  summary_samdata <- tbl_sum_samdata(data_fungi,
+    include = c("Time", "Height"),
+    type = list(Time ~ "continuous2", Height ~ "categorical"),
+    statistic = list(Time ~ c("{median} ({p25}, {p75})", "{min}, {max}"))
+  )
+}
 \donttest{
 data(enterotype)
-
-summary_samdata <- tbl_sum_samdata(enterotype)
-summary_samdata <- tbl_sum_samdata(enterotype, include = !contains("SampleId"))
+if (requireNamespace("gtsummary")) {
+  summary_samdata <- tbl_sum_samdata(enterotype)
+  summary_samdata <- tbl_sum_samdata(enterotype, include = !contains("SampleId"))
+}
 }
 }
 \author{

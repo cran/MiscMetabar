@@ -15,6 +15,9 @@ a color palette
 \description{
 Funky palette color
 }
+\seealso{
+The R package RColorBrewer, proposing a nice selection of color palettes. The viridis package, with many excellent palettes
+}
 \author{
-Thibaut Jombart
+Thibaut Jombart in \code{adegenet} package
 }

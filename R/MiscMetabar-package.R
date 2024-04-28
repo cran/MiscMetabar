@@ -3,7 +3,7 @@
 #' Functions to help analyze and visualize metabarcoding data. Mainly based on
 #' the phyloseq and dada2 packages.
 #' @name MiscMetabar-package
-#' @import ggplot2 phyloseq dada2 dplyr
+#' @import ggplot2 phyloseq dada2 dplyr purrr
 NULL
 
 if (getRversion() >= "2.15.1") {
@@ -23,7 +23,9 @@ if (getRversion() >= "2.15.1") {
     "update", "upr", "upViewport", "val", "value", "vegdist", "viewport",
     "write.table", "x", "x1", "X1", "x2", "y", "y1", "y2", "ymax",
     "ymin", ".group", "archetype", "nOTUid", "taxon", "total",
-    "chim_rm", "condition", "physeq", "seq_tab_Pairs"
+    "chim_rm", "condition", "physeq", "seq_tab_Pairs", "nb_samp", "silent",
+    "X1_lim1", "X1_lim2", "aicc", "variable", "pos_letters", "alluvium",
+    "na_remove", "stratum", "to_lodes_form"
   ))
 }
 

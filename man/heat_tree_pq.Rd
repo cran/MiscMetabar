@@ -27,7 +27,8 @@ and the number of sequences under the name \code{nb_sequences}
 }
 \examples{
 \donttest{
-if (!requireNamespace("metacoder")) {
+if (requireNamespace("metacoder")) {
+  library("metacoder")
   data("GlobalPatterns", package = "phyloseq")
 
   GPsubset <- subset_taxa(

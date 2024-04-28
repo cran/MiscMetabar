@@ -19,14 +19,16 @@
 #' @param title The title of the Graph.
 #' @param na_remove (logical, default FALSE) If set to TRUE, remove samples with
 #'   NA in the variables set in formula.
-#' @param ... other params for be passed on to
+#' @param ... Other params for be passed on to
 #'   [phyloseqGraphTest::graph_perm_test()] function
 #'
 #' @examples
 #' \donttest{
-#' data(enterotype)
-#' graph_test_pq(enterotype, fact = "SeqTech")
-#' graph_test_pq(enterotype, fact = "Enterotype", na_remove = TRUE)
+#' if (requireNamespace("phyloseqGraphTest")) {
+#'   data(enterotype)
+#'   graph_test_pq(enterotype, fact = "SeqTech")
+#'   graph_test_pq(enterotype, fact = "Enterotype", na_remove = TRUE)
+#' }
 #' }
 #' @author Adrien Taudière
 #'
@@ -147,14 +149,7 @@ adonis_pq <- function(physeq,
                       rarefy_nb_seqs = FALSE,
                       verbose = TRUE,
                       ...) {
-  physeq <- clean_pq(
-    physeq,
-    force_taxa_as_columns = TRUE,
-    remove_empty_samples = TRUE,
-    remove_empty_taxa = FALSE,
-    clean_samples_names = FALSE,
-    silent = TRUE
-  )
+  physeq <- taxa_as_columns(physeq)
 
   if (dist_method %in% c("aitchison", "robust.aitchison")) {
     phy_dist <-
@@ -172,7 +167,7 @@ adonis_pq <- function(physeq,
   termf <- stats::terms(.formula)
   term_lab <- attr(termf, "term.labels")[attr(termf, "order") == 1]
 
-  verify_pq(physeq, ...)
+  verify_pq(physeq)
 
   if (na_remove) {
     new_physeq <- physeq
@@ -218,6 +213,117 @@ adonis_pq <- function(physeq,
 }
 ################################################################################
 
+################################################################################
+#' Permanova (adonis) on permutations of rarefaction even depth
+#'
+#' @description
+#' `r lifecycle::badge("experimental")`
+#'
+#' @inheritParams adonis_pq
+#' @param nperm (int) The number of permutations to perform.
+#' @param progress_bar (logical, default TRUE) Do we print progress during
+#'   the calculation.
+#' @param quantile_prob (float, `[0:1]`) the value to compute the quantile.
+#'   Minimum quantile is compute using 1-quantile_prob.
+#' @param sample.size (int) A single integer value equal to the number of
+#'   reads being simulated, also known as the depth. See
+#'   [phyloseq::rarefy_even_depth()].
+#' @param ... Other params for be passed on to [adonis_pq()] function
+#'
+#' @return A list of three dataframe representing the mean, the minimum quantile
+#'  and the maximum quantile value for adonis results. See [adonis_pq()].
+#' @export
+#' @author Adrien Taudière
+#' @seealso [adonis_pq()]
+#' @examples
+#' if (requireNamespace("vegan")) {
+#'   data_fungi_woNA <-
+#'     subset_samples(data_fungi, !is.na(Time) & !is.na(Height))
+#'   adonis_rarperm_pq(data_fungi_woNA, "Time*Height", na_remove = TRUE, nperm = 3)
+#' }
+adonis_rarperm_pq <- function(physeq,
+                              formula,
+                              dist_method = "bray",
+                              merge_sample_by = NULL,
+                              na_remove = FALSE,
+                              rarefy_nb_seqs = FALSE,
+                              verbose = TRUE,
+                              nperm = 99,
+                              progress_bar = TRUE,
+                              quantile_prob = 0.975,
+                              sample.size = min(sample_sums(physeq)),
+                              ...) {
+  res_perm <- list()
+  if (progress_bar) {
+    pb <- txtProgressBar(
+      min = 0,
+      max = nperm,
+      style = 3,
+      width = 50,
+      char = "="
+    )
+  }
+  for (i in 1:nperm) {
+    res_perm[[i]] <-
+      adonis_pq(
+        rarefy_even_depth(
+          physeq,
+          rngseed = i,
+          sample.size = sample.size,
+          verbose = verbose
+        ),
+        formula,
+        dist_method = dist_method,
+        merge_sample_by = merge_sample_by,
+        na_remove = na_remove,
+        correction_for_sample_size = FALSE,
+        rarefy_nb_seqs = rarefy_nb_seqs,
+        verbose = verbose,
+        sample.size = sample.size,
+        ...
+      )
+    if (progress_bar) {
+      setTxtProgressBar(pb, i)
+    }
+  }
+  res_adonis <- list()
+  res_adonis[["mean"]] <-
+    apply(array(unlist(res_perm), c(dim(
+      as.data.frame(res_perm[[1]])
+    ), nperm)), c(1, 2), mean)
+  colnames(res_adonis[["mean"]]) <- colnames(res_perm[[1]])
+  rownames(res_adonis[["mean"]]) <- rownames(res_perm[[1]])
+
+
+  res_adonis[["quantile_min"]] <-
+    apply(
+      array(unlist(res_perm), c(dim(
+        as.data.frame(res_perm[[1]])
+      ), nperm)),
+      c(1, 2),
+      quantile,
+      na.rm = TRUE,
+      probs = 1 - quantile_prob
+    )
+  colnames(res_adonis[["quantile_min"]]) <- colnames(res_perm[[1]])
+  rownames(res_adonis[["quantile_min"]]) <- rownames(res_perm[[1]])
+
+  res_adonis[["quantile_max"]] <-
+    apply(
+      array(unlist(res_perm), c(dim(
+        as.data.frame(res_perm[[1]])
+      ), nperm)),
+      c(1, 2),
+      quantile,
+      na.rm = TRUE,
+      probs = quantile_prob
+    )
+  colnames(res_adonis[["quantile_max"]]) <- colnames(res_perm[[1]])
+  rownames(res_adonis[["quantile_max"]]) <- rownames(res_perm[[1]])
+
+  return(res_adonis)
+}
+################################################################################
 
 ################################################################################
 #' @title Compute and test local contributions to beta diversity (LCBD) of
@@ -237,12 +343,16 @@ adonis_pq <- function(physeq,
 #' @export
 #' @seealso [plot_LCBD_pq], [adespatial::beta.div()]
 #' @examples
-#' res <- LCBD_pq(data_fungi_sp_known, nperm = 5)
-#' str(res)
-#' length(res$LCBD)
-#' length(res$SCBD)
+#' if (requireNamespace("adespatial")) {
+#'   res <- LCBD_pq(data_fungi_sp_known, nperm = 5)
+#'   str(res)
+#'   length(res$LCBD)
+#'   length(res$SCBD)
+#' }
 #' \donttest{
-#' LCBD_pq(data_fungi_sp_known, nperm = 5, method = "jaccard")
+#' if (requireNamespace("adespatial")) {
+#'   LCBD_pq(data_fungi_sp_known, nperm = 5, method = "jaccard")
+#' }
 #' }
 #'
 #' @author Adrien Taudière
@@ -252,14 +362,7 @@ adonis_pq <- function(physeq,
 LCBD_pq <- function(physeq,
                     p_adjust_method = "BH",
                     ...) {
-  physeq <- clean_pq(
-    physeq,
-    force_taxa_as_columns = TRUE,
-    remove_empty_samples = TRUE,
-    remove_empty_taxa = FALSE,
-    clean_samples_names = FALSE,
-    silent = TRUE
-  )
+  physeq <- taxa_as_columns(physeq)
 
   mat <- as.matrix(unclass(physeq@otu_table))
   resBeta <- adespatial::beta.div(mat, adj = FALSE, ...)
@@ -288,35 +391,39 @@ LCBD_pq <- function(physeq,
 #'   values or only the significant ones
 #' @param ... Others arguments passed on to [adespatial::beta.div()] function
 #'
-#' @return A ggplot object build with the package patchwork
+#' @return A ggplot2 object build with the package patchwork
 #' @export
 #' @seealso [LCBD_pq], [adespatial::beta.div()]
 #'
 #' @examples
 #' data(data_fungi)
-#' plot_LCBD_pq(data_fungi_mini,
-#'   nperm = 100, only_plot_significant = FALSE,
-#'   pval = 0.2
-#' )
-#' \donttest{
-#' plot_LCBD_pq(data_fungi_mini,
-#'   nperm = 100, only_plot_significant = TRUE,
-#'   pval = 0.2
-#' )
-#' if (!requireNamespace("patchwork")) {
+#' if (requireNamespace("adespatial")) {
 #'   plot_LCBD_pq(data_fungi_mini,
 #'     nperm = 100, only_plot_significant = FALSE,
-#'     sam_variables = c("Time", "Height")
+#'     pval = 0.2
 #'   )
+#' }
+#' \donttest{
+#' if (requireNamespace("adespatial")) {
 #'   plot_LCBD_pq(data_fungi_mini,
-#'     nperm = 100, only_plot_significant = TRUE, pval = 0.2,
-#'     sam_variables = c("Time", "Height", "Tree_name")
-#'   ) &
-#'     theme(
-#'       legend.key.size = unit(0.4, "cm"),
-#'       legend.text = element_text(size = 10),
-#'       axis.title.x = element_text(size = 6)
+#'     nperm = 100, only_plot_significant = TRUE,
+#'     pval = 0.2
+#'   )
+#'   if (requireNamespace("patchwork")) {
+#'     plot_LCBD_pq(data_fungi_mini,
+#'       nperm = 100, only_plot_significant = FALSE,
+#'       sam_variables = c("Time", "Height")
 #'     )
+#'     plot_LCBD_pq(data_fungi_mini,
+#'       nperm = 100, only_plot_significant = TRUE, pval = 0.2,
+#'       sam_variables = c("Time", "Height", "Tree_name")
+#'     ) &
+#'       theme(
+#'         legend.key.size = unit(0.4, "cm"),
+#'         legend.text = element_text(size = 10),
+#'         axis.title.x = element_text(size = 6)
+#'       )
+#'   }
 #' }
 #' }
 #' @author Adrien Taudière
@@ -426,24 +533,29 @@ plot_LCBD_pq <- function(physeq,
 #' @inheritParams clean_pq
 #' @param tax_level Taxonomic level to used in y axis
 #' @param tax_col Taxonomic level to colored points
-#' @param min_SCBD (default: 0.01) the minimum SCBD value
+#' @param min_SCBD (default 0.01) the minimum SCBD value
 #'   to plot the taxa
 
 #' @param ... Others arguments passed on to [adespatial::beta.div()] function
 #'
-#' @return A ggplot object build with the package patchwork
+#' @return A ggplot2 object build with the package patchwork
 #' @export
 #' @seealso [LCBD_pq], [adespatial::beta.div()]
 #'
 #' @examples
 #' data(data_fungi)
-#' plot_SCBD_pq(data_fungi) +
-#'   geom_text(aes(label = paste(Genus, Species)), hjust = 1, vjust = 2) +
-#'   xlim(c(0, NA))
-#' \donttest{
-#' plot_SCBD_pq(data_fungi, tax_level = "Class", tax_col = "Phylum", min_SCBD = 0) +
-#'   geom_jitter()
+#' if (requireNamespace("adespatial")) {
+#'   plot_SCBD_pq(data_fungi) +
+#'     geom_text(aes(label = paste(Genus, Species)), hjust = 1, vjust = 2) +
+#'     xlim(c(0, NA))
 #' }
+#' \donttest{
+#' if (requireNamespace("adespatial")) {
+#'   plot_SCBD_pq(data_fungi, tax_level = "Class", tax_col = "Phylum", min_SCBD = 0) +
+#'     geom_jitter()
+#' }
+#' }
+#'
 #' @author Adrien Taudière
 #' @details
 #' This function is mainly a wrapper of the work of others.
@@ -493,18 +605,23 @@ plot_SCBD_pq <- function(physeq,
 #' @param control see `?indicspecies::multipatt()`
 #' @param ... Others arguments passed on to [indicspecies::multipatt()] function
 #'
-#' @return A ggplot object
+#' @return A ggplot2 object
 #' @export
 #' @examplesIf tolower(Sys.info()[["sysname"]]) != "windows"
-#' data(data_fungi)
-#' data_fungi_ab <- subset_taxa_pq(data_fungi, taxa_sums(data_fungi) > 10000)
-#' multipatt_pq(subset_samples(data_fungi_ab, !is.na(Time)), fact = "Time")
-#' \donttest{
-#' multipatt_pq(subset_samples(data_fungi_ab, !is.na(Time)),
-#'   fact = "Time",
-#'   max.order = 1, control = permute::how(nperm = 99)
-#' )
+#' if (requireNamespace("indicspecies")) {
+#'   data(data_fungi)
+#'   data_fungi_ab <- subset_taxa_pq(data_fungi, taxa_sums(data_fungi) > 10000)
+#'   multipatt_pq(subset_samples(data_fungi_ab, !is.na(Time)), fact = "Time")
 #' }
+#' \donttest{
+#' if (requireNamespace("indicspecies")) {
+#'   multipatt_pq(subset_samples(data_fungi_ab, !is.na(Time)),
+#'     fact = "Time",
+#'     max.order = 1, control = permute::how(nperm = 99)
+#'   )
+#' }
+#' }
+#'
 #' @author Adrien Taudière
 #' @details
 #' This function is mainly a wrapper of the work of others.
@@ -517,10 +634,7 @@ multipatt_pq <- function(physeq,
                          pval = 0.05,
                          control = permute::how(nperm = 999),
                          ...) {
-  physeq <- clean_pq(physeq,
-    clean_samples_names = FALSE,
-    force_taxa_as_columns = TRUE
-  )
+  physeq <- taxa_as_columns(physeq)
 
   res <-
     indicspecies::multipatt(as.matrix(physeq@otu_table),
@@ -576,35 +690,41 @@ multipatt_pq <- function(physeq,
 #'
 #' @examples
 #' \donttest{
-#' res_height <- ancombc_pq(
-#'   data_fungi_mini,
-#'   fact = "Height",
-#'   levels_fact = c("Low", "High"),
-#'   verbose = TRUE
-#' )
-#'
-#' ggplot(
-#'   res_height$res,
-#'   aes(
-#'     y = reorder(taxon, lfc_HeightHigh),
-#'     x = lfc_HeightHigh,
-#'     color = diff_HeightHigh
+#' if (requireNamespace("mia")) {
+#'   data_fungi_mini@tax_table <- phyloseq::tax_table(cbind(
+#'     data_fungi_mini@tax_table,
+#'     "taxon" = taxa_names(data_fungi_mini)
+#'   ))
+#'   res_height <- ancombc_pq(
+#'     data_fungi_mini,
+#'     fact = "Height",
+#'     levels_fact = c("Low", "High"),
+#'     verbose = TRUE
 #'   )
-#' ) +
-#'   geom_vline(xintercept = 0) +
-#'   geom_segment(aes(
-#'     xend = 0, y = reorder(taxon, lfc_HeightHigh),
-#'     yend = reorder(taxon, lfc_HeightHigh)
-#'   ), color = "darkgrey") +
-#'   geom_point()
 #'
-#' res_time <- ancombc_pq(
-#'   data_fungi_mini,
-#'   fact = "Time",
-#'   levels_fact = c("0", "15"),
-#'   tax_level = "Family",
-#'   verbose = TRUE
-#' )
+#'   ggplot(
+#'     res_height$res,
+#'     aes(
+#'       y = reorder(taxon, lfc_HeightHigh),
+#'       x = lfc_HeightHigh,
+#'       color = diff_HeightHigh
+#'     )
+#'   ) +
+#'     geom_vline(xintercept = 0) +
+#'     geom_segment(aes(
+#'       xend = 0, y = reorder(taxon, lfc_HeightHigh),
+#'       yend = reorder(taxon, lfc_HeightHigh)
+#'     ), color = "darkgrey") +
+#'     geom_point()
+#'
+#'   res_time <- ancombc_pq(
+#'     data_fungi_mini,
+#'     fact = "Time",
+#'     levels_fact = c("0", "15"),
+#'     tax_level = "Family",
+#'     verbose = TRUE
+#'   )
+#' }
 #' }
 #' @author Adrien Taudière
 #' @details
@@ -629,3 +749,657 @@ ancombc_pq <- function(physeq, fact, levels_fact = NULL, tax_level = "Class", ..
   )
   return(res_ancomb)
 }
+################################################################################
+
+
+################################################################################
+#' Filter ancombc_pq results
+#' @description
+#' `r lifecycle::badge("experimental")`
+#'
+#' @param ancombc_res (required) the result of the ancombc_pq function
+#'   For the moment only bimodal factors are possible.
+#' @param filter_passed (logical, default TRUE) Do we filter using the column
+#'   passed_ss? The passed_ss value is  TRUE if the taxon passed the sensitivity
+#'   analysis, i.e., adding different pseudo-counts to 0s would not change the results.
+#' @param filter_diff (logical, default TRUE) Do we filter using the column
+#'   diff? The diff value is TRUE if the taxon is significant
+#'   (has q less than alpha)
+#' @param min_abs_lfc (integer, default0) Minimum absolute value to filter
+#'   results based on Log Fold Change. For ex. a value of 1 filter out taxa
+#'   for which the abundance in a given level of the modality is not at least
+#'   the double of the abundance in the other level.
+#'
+#' @return A data.frame with the same number of columns than the `ancombc_res`
+#'   param but with less (or equal) numbers of rows
+#' @export
+#'
+#' @seealso [ancombc_pq()], [plot_ancombc_pq()]
+#'
+#' @examples
+#' \donttest{
+#' if (requireNamespace("mia")) {
+#'   data_fungi_mini@tax_table <- phyloseq::tax_table(cbind(
+#'     data_fungi_mini@tax_table,
+#'     "taxon" = taxa_names(data_fungi_mini)
+#'   ))
+#'
+#'   res_time <- ancombc_pq(
+#'     data_fungi_mini,
+#'     fact = "Time",
+#'     levels_fact = c("0", "15"),
+#'     tax_level = "taxon",
+#'     verbose = TRUE
+#'   )
+#'
+#'   signif_ancombc(res_time)
+#' }
+#' }
+#' @details
+#' This function is mainly a wrapper of the work of others.
+#'   Please make a reference to `ANCOMBC::ancombc2()` if you
+#'   use this function.
+signif_ancombc <- function(ancombc_res,
+                           filter_passed = TRUE,
+                           filter_diff = TRUE,
+                           min_abs_lfc = 0) {
+  signif_ancombc_res <- ancombc_res$res
+  clnames <- colnames(signif_ancombc_res)
+
+  name_modality <-
+    gsub(
+      "passed_ss", "",
+      clnames[grepl("passed_ss", clnames) &
+        !grepl("Intercept", clnames)]
+    )
+
+  if (filter_passed) {
+    signif_ancombc_res <- signif_ancombc_res %>%
+      filter(.data[[paste0("passed_ss", name_modality)]])
+  }
+
+  if (filter_diff) {
+    signif_ancombc_res <- signif_ancombc_res %>%
+      filter(.data[[paste0("diff", name_modality)]])
+  }
+  signif_ancombc_res <- signif_ancombc_res %>%
+    filter(abs(.data[[paste0("lfc", name_modality)]]) > min_abs_lfc)
+
+  return(signif_ancombc_res)
+}
+################################################################################
+
+
+################################################################################
+#' Plot ANCOMBC2 result for phyloseq object
+#' @description
+#' `r lifecycle::badge("experimental")`
+#'
+#' @inheritParams clean_pq
+#' @param ancombc_res (required) the result of the ancombc_pq function
+#'   For the moment only bimodal factors are possible.
+#' @param filter_passed (logical, default TRUE) Do we filter using the column
+#'   passed_ss? The passed_ss value is  TRUE if the taxon passed the sensitivity
+#'   analysis, i.e., adding different pseudo-counts to 0s would not change the results.
+#' @param filter_diff (logical, default TRUE) Do we filter using the column
+#'   diff? The diff value is TRUE if the taxon is significant
+#'   (has q less than alpha)
+#' @param min_abs_lfc (integer, default 0) Minimum absolute value to filter
+#'   results based on Log Fold Change. For ex. a value of 1 filter out taxa
+#'   for which the abundance in a given level of the modality is not at least
+#'   the double of the abundance in the other level.
+#' @param tax_col The taxonomic level (must be present in `tax_table` slot)
+#'   to color the points
+#' @param tax_label The taxonomic level (must be present in `tax_table` slot)
+#'   to add label
+#' @param add_marginal_vioplot (logical, default TRUE) Do we add a marginal
+#'   vioplot representing all the taxa lfc from ancombc_res.
+#' @param add_label (logical, default TRUE) Do we add a label?
+#' @param add_hline_cut_lfc (logical, default NULL) Do we add two horizontal
+#'   lines when min_abs_lfc is set (different from zero)?
+#'
+#' @return A ggplot2 object. If add_marginal_vioplot is TRUE, this is a
+#'   patchworks of plot made using `patchwork::plot_layout()`.
+#' @export
+#'
+#' @examples
+#' \donttest{
+#' if (requireNamespace("mia")) {
+#'   data_fungi_mini@tax_table <- phyloseq::tax_table(cbind(
+#'     data_fungi_mini@tax_table,
+#'     "taxon" = taxa_names(data_fungi_mini)
+#'   ))
+#'
+#'   res_time <- ancombc_pq(
+#'     data_fungi_mini,
+#'     fact = "Time",
+#'     levels_fact = c("0", "15"),
+#'     tax_level = "taxon",
+#'     verbose = TRUE
+#'   )
+#'
+#'   plot_ancombc_pq(data_fungi_mini, res_time,
+#'     filter_passed = FALSE,
+#'     tax_label = "Genus", tax_col = "Order"
+#'   )
+#'   plot_ancombc_pq(data_fungi_mini, res_time, tax_col = "Genus")
+#'   plot_ancombc_pq(data_fungi_mini, res_time,
+#'     filter_passed = FALSE,
+#'     filter_diff = FALSE, tax_col = "Family", add_label = FALSE
+#'   )
+#' }
+#' }
+#' @details
+#' This function is mainly a wrapper of the work of others.
+#'   Please make a reference to `ANCOMBC::ancombc2()` if you
+#'   use this function.
+#' @author Adrien Taudière
+
+
+plot_ancombc_pq <-
+  function(physeq,
+           ancombc_res,
+           filter_passed = TRUE,
+           filter_diff = TRUE,
+           min_abs_lfc = 0,
+           tax_col = "Genus",
+           tax_label = "Species",
+           add_marginal_vioplot = TRUE,
+           add_label = TRUE,
+           add_hline_cut_lfc = NULL) {
+    verify_pq(physeq)
+
+    if (is.null(add_hline_cut_lfc)) {
+      if (min_abs_lfc != 0) {
+        add_hline_cut_lfc <- TRUE
+      } else {
+        add_hline_cut_lfc <- FALSE
+      }
+    }
+
+    signif_ancombc_res <- signif_ancombc(
+      ancombc_res,
+      filter_passed = filter_passed,
+      filter_diff = filter_diff,
+      min_abs_lfc = min_abs_lfc
+    )
+
+    clnames <- colnames(ancombc_res$res)
+    name_modality <-
+      gsub(
+        "passed_ss", "",
+        clnames[grepl("passed_ss", clnames) &
+          !grepl("Intercept", clnames)]
+      )
+
+    taxtable <- data.frame(physeq@tax_table)
+    taxtable$taxon <- taxa_names(physeq)
+
+    df <-
+      left_join(signif_ancombc_res, taxtable, by = join_by("taxon" == "taxon"))
+    df[[tax_label]] <- gsub("unidentified", NA, df[[tax_label]])
+
+    p <- ggplot(
+      df,
+      aes(
+        y = reorder(taxon, .data[[paste0("lfc", name_modality)]]),
+        x = .data[[paste0("lfc", name_modality)]],
+        color = .data[[tax_col]]
+      )
+    ) +
+      geom_vline(xintercept = 0) +
+      geom_segment(aes(
+        xend = 0,
+        y = reorder(taxon, .data[[paste0("lfc", name_modality)]]),
+        yend = reorder(taxon, .data[[paste0("lfc", name_modality)]])
+      ), color = "darkgrey") +
+      geom_point(size = 3)
+
+    if (add_label) {
+      p <- p + geom_label(aes(
+        label = .data[[tax_label]], x =
+          0
+      ))
+    }
+    if (add_hline_cut_lfc) {
+      p <- p +
+        geom_vline(
+          xintercept = min_abs_lfc,
+          color = "grey20",
+          lty = 2
+        ) +
+        geom_vline(
+          xintercept = -min_abs_lfc,
+          color = "grey20",
+          lty = 2
+        )
+    }
+
+    if (add_marginal_vioplot) {
+      marg_vio <-
+        (
+          ggplot(data = ancombc_res$res, aes(x = .data[[paste0("lfc", name_modality)]], y = 1)) +
+            geom_violin(fill = transp("grey", 0.5)) +
+            geom_point(aes(color = .data[[paste0("diff", name_modality)]] &
+              .data[[paste0("passed_ss", name_modality)]]), position = position_jitter()) +
+            scale_color_manual(values = c("grey70", "grey20")) +
+            theme(legend.position = "none")
+        )
+
+      p <-
+        marg_vio / (p + xlim(layer_scales(marg_vio)$x$get_limits())) +
+        patchwork::plot_layout(heights = c(1, 7), axes = "collect")
+    }
+    return(p)
+  }
+################################################################################
+
+################################################################################
+#' Show taxa which are present in only one given level of a modality
+#'
+#' @description
+#' `r lifecycle::badge("experimental")`
+#'
+#' @inheritParams clean_pq
+#' @param modality (required) The name of a column present in the `@sam_data` slot
+#'   of the physeq object. Must be a character vector or a factor.
+#' @param level (required) The level (must be present in modality) of interest
+#' @param min_nb_seq_taxa (default 0 = no filter) The minimum number of sequences per taxa
+#' @param min_nb_samples_taxa (default 0 = no filter) The minimum number of samples per taxa
+#'
+#' @return A vector of taxa names
+#' @export
+#'
+#' @author Adrien Taudière
+#' @examples
+#' data_fungi_mini_woNA4height <- subset_samples(
+#'   data_fungi_mini,
+#'   !is.na(data_fungi_mini@sam_data$Height)
+#' )
+#' taxa_only_in_one_level(data_fungi_mini_woNA4height, "Height", "High")
+taxa_only_in_one_level <- function(physeq,
+                                   modality,
+                                   level,
+                                   min_nb_seq_taxa = 0,
+                                   min_nb_samples_taxa = 0) {
+  if (min_nb_seq_taxa > 0) {
+    physeq <-
+      subset_taxa_pq(physeq, taxa_sums(physeq) >= min_nb_seq_taxa)
+  }
+  if (min_nb_samples_taxa > 0) {
+    physeq <-
+      subset_taxa_pq(
+        physeq,
+        taxa_sums(as_binary_otu_table(physeq)) >= min_nb_samples_taxa
+      )
+  }
+
+  physeq_merged <- clean_pq(merge_samples2(physeq, modality))
+
+  physeq_merged_only_one_level <-
+    subset_taxa_pq(physeq_merged, taxa_sums(as_binary_otu_table(physeq_merged)) ==
+      1)
+  physeq_merged_only_level_given <-
+    clean_pq(subset_samples_pq(
+      physeq_merged_only_one_level,
+      rownames(physeq_merged_only_one_level@sam_data) == level
+    ))
+  return(taxa_names(physeq_merged_only_level_given))
+}
+################################################################################
+
+################################################################################
+#' Distribution of sequences across a factor for one taxon
+#'
+#' @description
+#' `r lifecycle::badge("experimental")`
+#'
+#' @inheritParams clean_pq
+#' @param fact (required) Name of the factor in `physeq@sam_data` used to plot
+#'    different lines
+#' @param taxa_name (required): the name of the taxa
+#' @param digits (default = 2) integer indicating the number of decimal places
+#'   to be used (see `?round` for more information)
+#'
+#' @return a dataframe with levels as rows and information as column :
+#'   - the number of sequences of the taxa (nb_seq)
+#'   - the number of samples of the taxa (nb_samp)
+#'   - the mean (mean_nb_seq) and standard deviation (sd_nb_seq) of the *nb_seq*
+#'   - the mean (mean_nb_seq_when_present) *nb_seq* excluding samples with zero
+#'   - the total number of samples (nb_total_samp)
+#'   - the proportion of samples with the taxa
+#'
+#' @export
+#' @author Adrien Taudière
+#' @examples
+#' distri_1_taxa(data_fungi, "Height", "ASV2")
+#' distri_1_taxa(data_fungi, "Time", "ASV81", digits = 1)
+#' @importFrom stats sd
+distri_1_taxa <- function(physeq, fact, taxa_name, digits = 2) {
+  physeq <- taxa_as_rows(physeq)
+  df <-
+    data.frame(
+      "nb_seq" = tapply(
+        as.vector(physeq@otu_table[taxa_name, ]),
+        physeq@sam_data[[fact]], sum
+      ),
+      "nb_samp" = tapply(
+        as.vector(as_binary_otu_table(physeq)@otu_table[taxa_name, ]),
+        physeq@sam_data[[fact]],
+        sum
+      ),
+      "mean_nb_seq" = round(tapply(
+        as.vector(physeq@otu_table[taxa_name, ]),
+        physeq@sam_data[[fact]], mean
+      ), digits = digits),
+      "sd_nb_seq" = round(tapply(
+        as.vector(physeq@otu_table[taxa_name, ]),
+        physeq@sam_data[[fact]], sd
+      ), digits = digits)
+    ) %>%
+    mutate("mean_nb_seq_when_present" = round(nb_seq / nb_samp,
+      digits =
+        digits
+    ))
+
+  df$nb_total_samp <- table(physeq@sam_data[[fact]])
+  df$prop_samp <-
+    round(df$nb_samp / df$nb_total_samp, digits = digits)
+  return(df)
+}
+################################################################################
+
+################################################################################
+#' Partition the Variation of a phyloseq object by 2, 3, or 4 Explanatory Matrices
+#' @description
+#' `r lifecycle::badge("experimental")`
+#'   The function partitions the variation in otu_table using
+#'   distance (Bray per default) with respect to two, three, or four explanatory
+#'   tables, using
+#'   adjusted R² in redundancy analysis ordination (RDA) or distance-based
+#'   redundancy analysis. If response is a single vector, partitioning is by
+#'   partial regression. Collinear variables in the explanatory tables do NOT
+#'   have to be removed prior to partitioning. See [vegan::varpart()] for more
+#'   information.
+#'
+#' @inheritParams clean_pq
+#' @param list_component (required) A named list of 2, 3 or four vectors with
+#'   names from the `@sam_data` slot.
+#' @param dist_method (default "bray") the distance used. See
+#'   [phyloseq::distance()] for all available distances or run
+#'   [phyloseq::distanceMethodList()].
+#'   For "aitchison" and "robust.aitchison" distance, [vegan::vegdist()]
+#'   function is directly used.
+#' @param dbrda_computation (logical) Do dbrda computations are runned for each
+#'  individual component (each name of the list component) ?
+#'
+#' @return an object of class "varpart", see [vegan::varpart()]
+#' @export
+#' @author Adrien Taudière
+#' @seealso [var_par_rarperm_pq()], [vegan::varpart()], [plot_var_part_pq()]
+#' @examples
+#' \donttest{
+#' if (requireNamespace("vegan")) {
+#'   data_fungi_woNA <-
+#'     subset_samples(data_fungi, !is.na(Time) & !is.na(Height))
+#'   res_var <- var_par_pq(data_fungi_woNA,
+#'     list_component = list(
+#'       "Time" = c("Time"),
+#'       "Size" = c("Height", "Diameter")
+#'     ),
+#'     dbrda_computation = TRUE
+#'   )
+#' }
+#' }
+#' @details
+#' This function is mainly a wrapper of the work of others.
+#'   Please make a reference to `vegan::varpart()` if you
+#'   use this function.
+var_par_pq <-
+  function(physeq,
+           list_component,
+           dist_method = "bray",
+           dbrda_computation = TRUE) {
+    physeq <- taxa_as_columns(physeq)
+
+    verify_pq(physeq)
+
+    if (dist_method %in% c("robust.aitchison", "aitchison")) {
+      dist_physeq <-
+        vegan::vegdist(as(otu_table(physeq, taxa_are_rows = FALSE), "matrix"),
+          method = dist_method
+        )
+    } else {
+      dist_physeq <- phyloseq::distance(physeq, method = dist_method)
+    }
+
+    for (i in 1:length(list_component)) {
+      assign(
+        names(list_component)[i],
+        as.data.frame(unclass(physeq@sam_data[, list_component[[i]]]))
+      )
+    }
+
+    if (length(list_component) == 2) {
+      res_varpart <-
+        vegan::varpart(
+          dist_physeq,
+          eval(sym(names(list_component)[1])),
+          eval(sym(names(list_component)[2]))
+        )
+    } else if (length(list_component) == 3) {
+      res_varpart <-
+        vegan::varpart(
+          dist_physeq,
+          eval(sym(names(list_component)[1])),
+          eval(sym(names(list_component)[2])),
+          eval(sym(names(list_component)[3]))
+        )
+    } else if (length(list_component) == 4) {
+      res_varpart <-
+        vegan::varpart(
+          dist_physeq,
+          eval(sym(names(list_component)[1])),
+          eval(sym(names(list_component)[2])),
+          eval(sym(names(list_component)[3])),
+          eval(sym(names(list_component)[4]))
+        )
+    } else {
+      stop("The list_component must be of length 2, 3 or 4")
+    }
+
+    if (dbrda_computation) {
+      res_varpart$dbrda_result <- list()
+      for (i in 1:length(list_component)) {
+        res_varpart$dbrda_result[[i]] <-
+          anova(vegan::dbrda(
+            as.formula(paste0(
+              "dist_physeq ~ ", paste(c(list_component[[i]]), collapse = " + ")
+            )),
+            data = as.data.frame(unclass(
+              physeq@sam_data
+            ))
+          ))
+      }
+    }
+    res_varpart$Xnames <- names(list_component)
+    return(res_varpart)
+  }
+################################################################################
+
+
+################################################################################
+#' Partition the Variation of a phyloseq object with rarefaction permutations
+#' @description
+#' `r lifecycle::badge("experimental")`
+#'
+#'   This is an extension of the function [var_par_pq()]. The main addition is
+#'   the computation of nperm permutations with rarefaction even depth by
+#'   sample. The return object
+#'
+#'
+#' @inheritParams clean_pq
+#' @param list_component (required) A named list of 2, 3 or four vectors with
+#'   names from the `@sam_data` slot.
+#' @param dist_method (default "bray") the distance used. See
+#'   [phyloseq::distance()] for all available distances or run
+#'   [phyloseq::distanceMethodList()].
+#'   For aitchison and robust.aitchison distance, [vegan::vegdist()]
+#'   function is directly used.#' @param fill_bg
+#' @param nperm (int) The number of permutations to perform.
+#' @param quantile_prob (float, `[0:1]`) the value to compute the quantile.
+#'   Minimum quantile is compute using 1-quantile_prob.
+#' @param dbrda_computation (logical) Do dbrda computations are runned for each
+#'  individual component (each name of the list component) ?
+#' @param dbrda_signif_pval (float, `[0:1]`) The value under which the dbrda is
+#'   considered significant.
+#' @param sample.size (int) A single integer value equal to the number of
+#'   reads being simulated, also known as the depth. See
+#'   [phyloseq::rarefy_even_depth()].
+#' @param verbose (logical). If TRUE, print additional informations.
+#' @param progress_bar (logical, default TRUE) Do we print progress during
+#'   the calculation?
+#'
+#' @return A list of class varpart with additional information in the
+#'  `$part$indfract` part. Adj.R.square is the mean across permutation.
+#'   Adj.R.squared_quantil_min and Adj.R.squared_quantil_max represent
+#'   the quantile values of adjuste R squared
+#' @export
+#' @seealso [var_par_pq()], [vegan::varpart()], [plot_var_part_pq()]
+#' @author Adrien Taudière
+#' @examples
+#' \donttest{
+#' if (requireNamespace("vegan")) {
+#'   data_fungi_woNA <- subset_samples(data_fungi, !is.na(Time) & !is.na(Height))
+#'   res_var_9 <- var_par_rarperm_pq(
+#'     data_fungi_woNA,
+#'     list_component = list(
+#'       "Time" = c("Time"),
+#'       "Size" = c("Height", "Diameter")
+#'     ),
+#'     nperm = 9,
+#'     dbrda_computation = TRUE
+#'   )
+#'   res_var_2 <- var_par_rarperm_pq(
+#'     data_fungi_woNA,
+#'     list_component = list(
+#'       "Time" = c("Time"),
+#'       "Size" = c("Height", "Diameter")
+#'     ),
+#'     nperm = 2,
+#'     dbrda_computation = TRUE
+#'   )
+#' }
+#' }
+#' @details
+#' This function is mainly a wrapper of the work of others.
+#'   Please make a reference to `vegan::varpart()` if you
+#'   use this function.
+var_par_rarperm_pq <-
+  function(physeq,
+           list_component,
+           dist_method = "bray",
+           nperm = 99,
+           quantile_prob = 0.975,
+           dbrda_computation = FALSE,
+           dbrda_signif_pval = 0.05,
+           sample.size = min(sample_sums(physeq)),
+           verbose = FALSE,
+           progress_bar = TRUE) {
+    physeq <- taxa_as_columns(physeq)
+    verify_pq(physeq)
+
+    if (progress_bar) {
+      pb <- txtProgressBar(
+        min = 0,
+        max = nperm,
+        style = 3,
+        width = 50,
+        char = "="
+      )
+    }
+
+    if (dist_method %in% c("robust.aitchison", "aitchison")) {
+      dist_physeq <-
+        vegdist(as(otu_table(physeq, taxa_are_rows = FALSE), "matrix"), method = dist_method)
+    } else {
+      dist_physeq <- phyloseq::distance(physeq, method = dist_method)
+    }
+
+    res_perm <- list()
+    for (i in 1:nperm) {
+      res_perm[[i]] <-
+        var_par_pq(
+          physeq =
+            rarefy_even_depth(
+              physeq,
+              rngseed = i,
+              sample.size = sample.size,
+              verbose = verbose
+            ),
+          list_component = list_component,
+          dist_method = dist_method,
+          dbrda_computation = dbrda_computation
+        )
+
+      if (progress_bar) {
+        setTxtProgressBar(pb, i)
+      }
+    }
+    res_varpart <- var_par_pq(
+      physeq = physeq,
+      list_component = list_component,
+      dist_method = dist_method,
+      dbrda_computation = dbrda_computation
+    )
+
+    if (dbrda_computation) {
+      res_varpart$dbrda_result_prop_pval_signif <-
+        rowSums(sapply(res_perm, function(x) {
+          sapply(x$dbrda_result, function(xx) {
+            xx$`Pr(>F)`[[1]]
+          })
+        }) < dbrda_signif_pval) / nperm
+    }
+
+
+    res_varpart$part$indfract$R.square <-
+      rowMeans(sapply(res_perm, function(x) {
+        (x$part$indfract$R.square)
+      }))
+    res_varpart$part$indfract$R.square_quantil_max <-
+      apply(sapply(res_perm, function(x) {
+        (x$part$indfract$R.square)
+      }), 1, function(xx) {
+        quantile(xx, probs = quantile_prob, na.rm = TRUE)
+      })
+    res_varpart$part$indfract$R.square_quantil_min <-
+      apply(sapply(res_perm, function(x) {
+        (x$part$indfract$R.square)
+      }), 1, function(xx) {
+        quantile(xx, probs = 1 - quantile_prob, na.rm = TRUE)
+      })
+
+    res_varpart$part$indfract$Adj.R.square <-
+      rowMeans(sapply(res_perm, function(x) {
+        (x$part$indfract$Adj.R.square)
+      }))
+    res_varpart$part$indfract$Adj.R.squared_quantil_max <-
+      apply(sapply(res_perm, function(x) {
+        (x$part$indfract$Adj.R.square)
+      }), 1, function(xx) {
+        quantile(xx, probs = quantile_prob, na.rm = TRUE)
+      })
+    res_varpart$part$indfract$Adj.R.squared_quantil_min <-
+      apply(sapply(res_perm, function(x) {
+        (x$part$indfract$Adj.R.square)
+      }), 1, function(xx) {
+        quantile(xx, probs = 1 - quantile_prob, na.rm = TRUE)
+      })
+    return(res_varpart)
+
+
+    res_varpart$Xnames <- names(list_component)
+    return(res_varpart)
+  }
+################################################################################

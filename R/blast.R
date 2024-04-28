@@ -331,7 +331,7 @@ blast_pq <- function(physeq,
 
 
 ################################################################################
-#' Filter undesirable taxa using blast against a against a custom database.
+#' Filter undesirable taxa using blast against a custom database.
 #'
 #' `r lifecycle::badge("experimental")`
 #'
@@ -605,7 +605,7 @@ blast_to_derep <- function(derep,
 #' @param fasta_for_db path to a fasta file to make the blast database
 #' @param silent (logical) If true, no message are printing.
 #' @param ... Other arguments passed on to [blast_pq()] function.
-#' @return a physeq object with more information in tax_table based on a
+#' @return A new \code{\link{phyloseq-class}} object with more information in tax_table based on a
 #'   blast on a given database
 #'
 #' @export
