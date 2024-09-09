@@ -7,7 +7,7 @@
 rarefy_sample_count_by_modality(physeq, fact, rngseed = FALSE, verbose = TRUE)
 }
 \arguments{
-\item{physeq}{(required): a \code{\link{phyloseq-class}} object obtained
+\item{physeq}{(required): a \code{\link[phyloseq]{phyloseq-class}} object obtained
 using the \code{phyloseq} package.}
 
 \item{fact}{(required): The variable to rarefy. Must be present in
@@ -16,16 +16,24 @@ the \code{sam_data} slot of the physeq object.}
 \item{rngseed}{(Optional). A single integer value passed to set.seed,
 which is used to fix a seed for reproducibly random number generation
 (in this case, reproducibly random subsampling). If set to FALSE, then no
-iddling with the RNG seed is performed,
-and it is up to the user to appropriately call}
+iddling with the RNG seed is performed, and it is up to the user to
+appropriately call}
 
 \item{verbose}{(logical). If TRUE, print additional informations.}
 }
 \value{
-A new \code{\link{phyloseq-class}} object.
+A new \code{\link[phyloseq]{phyloseq-class}} object.
 }
 \description{
-\ifelse{html}{\href{https://lifecycle.r-lib.org/articles/stages.html#experimental}{\figure{lifecycle-experimental.svg}{options: alt='[Experimental]'}}}{\strong{[Experimental]}}
+\if{html}{\out{
+<a href="https://adrientaudiere.github.io/MiscMetabar/articles/Rules.html#lifecycle">
+<img src="https://img.shields.io/badge/lifecycle-experimental-orange" alt="lifecycle-experimental"></a>
+}}
+
+
+This function randomly draw the same number of samples for each modality of factor.
+It is usefull to dissentangle the effect of different number of samples per modality
+on diversity. Internally used in \code{\link[=accu_plot_balanced_modality]{accu_plot_balanced_modality()}}.
 }
 \examples{
 table(data_fungi_mini@sam_data$Height)

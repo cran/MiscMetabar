@@ -1,7 +1,9 @@
 ################################################################################
 #' @title Performs graph-based permutation tests on phyloseq object
 #' @description
-#' `r lifecycle::badge("maturing")`
+#'
+#' <a href="https://adrientaudiere.github.io/MiscMetabar/articles/Rules.html#lifecycle">
+#' <img src="https://img.shields.io/badge/lifecycle-maturing-blue" alt="lifecycle-maturing"></a>
 #'
 #' A wrapper of [phyloseqGraphTest::graph_perm_test()] for quick plot with
 #' important statistics
@@ -15,7 +17,7 @@
 #'   Need to be in \code{physeq@sam_data}
 #' @param nperm (int) The number of permutations to perform.
 #' @param return_plot (logical) Do we return only the result
-#'   of the test or do we plot the result?
+#'   of the test, or do we plot the result?
 #' @param title The title of the Graph.
 #' @param na_remove (logical, default FALSE) If set to TRUE, remove samples with
 #'   NA in the variables set in formula.
@@ -32,7 +34,7 @@
 #' }
 #' @author Adrien Taudière
 #'
-#' @return A \code{\link{ggplot}}2 plot with a subtitle indicating the pvalue
+#' @return A \code{\link[ggplot2]{ggplot}}2 plot with a subtitle indicating the pvalue
 #' and the number of permutations
 #' @details
 #' This function is mainly a wrapper of the work of others.
@@ -95,7 +97,9 @@ graph_test_pq <- function(physeq,
 ################################################################################
 #' @title Permanova on a phyloseq object
 #' @description
-#' `r lifecycle::badge("experimental")`
+#'
+#' <a href="https://adrientaudiere.github.io/MiscMetabar/articles/Rules.html#lifecycle">
+#' <img src="https://img.shields.io/badge/lifecycle-experimental-orange" alt="lifecycle-experimental"></a>
 #'
 #' A wrapper for the [vegan::adonis2()] function in the case of `physeq` object.
 #' @inheritParams clean_pq
@@ -112,7 +116,7 @@ graph_test_pq <- function(physeq,
 #' @param na_remove (logical, default FALSE) If set to TRUE, remove samples with
 #'   NA in the variables set in formula.
 #' @param correction_for_sample_size (logical, default FALSE) If set to TRUE,
-#'   the sample size (number of sequences by samples) is add to formula in
+#'   the sample size (number of sequences by samples) is added to formula in
 #'   the form `y~Library_Size + Biological_Effect` following recommendation of
 #'   [Weiss et al. 2017](https://microbiomejournal.biomedcentral.com/articles/10.1186/s40168-017-0237-y).
 #'   `correction_for_sample_size` overcome `rarefy_nb_seqs` if both are TRUE.
@@ -217,18 +221,24 @@ adonis_pq <- function(physeq,
 #' Permanova (adonis) on permutations of rarefaction even depth
 #'
 #' @description
-#' `r lifecycle::badge("experimental")`
+#'
+#' <a href="https://adrientaudiere.github.io/MiscMetabar/articles/Rules.html#lifecycle">
+#' <img src="https://img.shields.io/badge/lifecycle-experimental-orange" alt="lifecycle-experimental"></a>
+#'
+#' Permanova are computed on a given number of rarefaction with different
+#' seed.number. This reduce the risk of a random drawing of a exceptional
+#' situation of an unique rarefaction.
 #'
 #' @inheritParams adonis_pq
-#' @param nperm (int) The number of permutations to perform.
+#' @param nperm (int, default = 99) The number of permutations to perform.
 #' @param progress_bar (logical, default TRUE) Do we print progress during
 #'   the calculation.
 #' @param quantile_prob (float, `[0:1]`) the value to compute the quantile.
-#'   Minimum quantile is compute using 1-quantile_prob.
+#'   Minimum quantile is computed using 1-quantile_prob.
 #' @param sample.size (int) A single integer value equal to the number of
 #'   reads being simulated, also known as the depth. See
 #'   [phyloseq::rarefy_even_depth()].
-#' @param ... Other params for be passed on to [adonis_pq()] function
+#' @param ... Other params to be passed on to [adonis_pq()] function
 #'
 #' @return A list of three dataframe representing the mean, the minimum quantile
 #'  and the maximum quantile value for adonis results. See [adonis_pq()].
@@ -329,14 +339,16 @@ adonis_rarperm_pq <- function(physeq,
 #' @title Compute and test local contributions to beta diversity (LCBD) of
 #'   samples
 #' @description
-#' `r lifecycle::badge("experimental")`
+#'
+#' <a href="https://adrientaudiere.github.io/MiscMetabar/articles/Rules.html#lifecycle">
+#' <img src="https://img.shields.io/badge/lifecycle-experimental-orange" alt="lifecycle-experimental"></a>
 #'
 #' A wrapper for the [adespatial::beta.div()] function in the case of `physeq`
 #'   object.
 #' @inheritParams clean_pq
 #'
 #' @param p_adjust_method (chr, default "BH"): the method used to adjust p-value
-#' @param ... Others arguments passed on to [adespatial::beta.div()] function
+#' @param ... Other arguments passed on to [adespatial::beta.div()] function
 #'
 #' @return An object of class `beta.div` see [adespatial::beta.div()] function
 #'   for more information
@@ -376,7 +388,9 @@ LCBD_pq <- function(physeq,
 ################################################################################
 #' @title Plot and test local contributions to beta diversity (LCBD) of samples
 #' @description
-#' `r lifecycle::badge("experimental")`
+#'
+#' <a href="https://adrientaudiere.github.io/MiscMetabar/articles/Rules.html#lifecycle">
+#' <img src="https://img.shields.io/badge/lifecycle-experimental-orange" alt="lifecycle-experimental"></a>
 #'
 #' A wrapper for the [adespatial::beta.div()] function in the case of `physeq`
 #'   object.
@@ -385,11 +399,11 @@ LCBD_pq <- function(physeq,
 #' @param p_adjust_method (chr, default "BH"): the method used to adjust p-value
 #' @param pval (int, default 0.05): the value to determine the significance of
 #'   LCBD
-#' @param sam_variables A vector of variables names present in the `sam_data`
+#' @param sam_variables A vector of variable names present in the `sam_data`
 #'   slot to plot alongside the LCBD value
 #' @param only_plot_significant (logical, default TRUE) Do we plot all LCBD
 #'   values or only the significant ones
-#' @param ... Others arguments passed on to [adespatial::beta.div()] function
+#' @param ... Other arguments passed on to [adespatial::beta.div()] function
 #'
 #' @return A ggplot2 object build with the package patchwork
 #' @export
@@ -526,7 +540,9 @@ plot_LCBD_pq <- function(physeq,
 ################################################################################
 #' @title Plot species contributions to beta diversity (SCBD) of samples
 #' @description
-#' `r lifecycle::badge("experimental")`
+#'
+#' <a href="https://adrientaudiere.github.io/MiscMetabar/articles/Rules.html#lifecycle">
+#' <img src="https://img.shields.io/badge/lifecycle-experimental-orange" alt="lifecycle-experimental"></a>
 #'
 #' A wrapper for the [adespatial::beta.div()] function in the case of `physeq`
 #'   object.
@@ -536,7 +552,7 @@ plot_LCBD_pq <- function(physeq,
 #' @param min_SCBD (default 0.01) the minimum SCBD value
 #'   to plot the taxa
 
-#' @param ... Others arguments passed on to [adespatial::beta.div()] function
+#' @param ... Other arguments passed on to [adespatial::beta.div()] function
 #'
 #' @return A ggplot2 object build with the package patchwork
 #' @export
@@ -562,7 +578,7 @@ plot_LCBD_pq <- function(physeq,
 #'   Please make a reference to `vegan::beta.div()` if you
 #'   use this function.
 plot_SCBD_pq <- function(physeq,
-                         tax_level = "ASV",
+                         tax_level = "Taxa",
                          tax_col = "Order",
                          min_SCBD = 0.01,
                          ...) {
@@ -571,7 +587,7 @@ plot_SCBD_pq <- function(physeq,
   tax_tab <- data.frame(physeq@tax_table)
 
   resSCBD <- tibble(
-    "ASV" = taxa_names(physeq),
+    "Taxa" = taxa_names(physeq),
     "SCBD" = resBeta$SCBD,
     tax_tab
   )
@@ -592,7 +608,9 @@ plot_SCBD_pq <- function(physeq,
 ################################################################################
 #' @title Test and plot multipatt result
 #' @description
-#' `r lifecycle::badge("experimental")`
+#'
+#' <a href="https://adrientaudiere.github.io/MiscMetabar/articles/Rules.html#lifecycle">
+#' <img src="https://img.shields.io/badge/lifecycle-experimental-orange" alt="lifecycle-experimental"></a>
 #'
 #' A wrapper for the [indicspecies::multipatt()] function in the case of
 #'   `physeq` object.
@@ -603,7 +621,7 @@ plot_SCBD_pq <- function(physeq,
 #' @param pval (int, default 0.05): the value to determine the significance of
 #'   LCBD
 #' @param control see `?indicspecies::multipatt()`
-#' @param ... Others arguments passed on to [indicspecies::multipatt()] function
+#' @param ... Other arguments passed on to [indicspecies::multipatt()] function
 #'
 #' @return A ggplot2 object
 #' @export
@@ -645,7 +663,7 @@ multipatt_pq <- function(physeq,
 
   res_df <- res$sign
   res_df$p.adj <- p.adjust(res_df$p.value, method = p_adjust_method)
-  res_df$ASV_names <- rownames(res_df)
+  res_df$taxon_names <- rownames(res_df)
   res_df_signif <-
     res_df %>%
     filter(p.adj < pval) %>%
@@ -654,7 +672,7 @@ multipatt_pq <- function(physeq,
   p <- ggplot(
     res_df_signif,
     aes(
-      x = ASV_names,
+      x = taxon_names,
       y = name,
       size = 2 * value,
       color = stat
@@ -673,7 +691,9 @@ multipatt_pq <- function(physeq,
 ################################################################################
 #' Run ANCOMBC2 on phyloseq object
 #' @description
-#' `r lifecycle::badge("experimental")`
+#'
+#' <a href="https://adrientaudiere.github.io/MiscMetabar/articles/Rules.html#lifecycle">
+#' <img src="https://img.shields.io/badge/lifecycle-experimental-orange" alt="lifecycle-experimental"></a>
 #'
 #' A wrapper for the [ANCOMBC::ancombc2()] function
 #'
@@ -754,8 +774,12 @@ ancombc_pq <- function(physeq, fact, levels_fact = NULL, tax_level = "Class", ..
 
 ################################################################################
 #' Filter ancombc_pq results
+#'
 #' @description
-#' `r lifecycle::badge("experimental")`
+#' <a href="https://adrientaudiere.github.io/MiscMetabar/articles/Rules.html#lifecycle">
+#' <img src="https://img.shields.io/badge/lifecycle-experimental-orange" alt="lifecycle-experimental"></a>
+#'
+#' Internally used in [plot_ancombc_pq()].
 #'
 #' @param ancombc_res (required) the result of the ancombc_pq function
 #'   For the moment only bimodal factors are possible.
@@ -832,8 +856,12 @@ signif_ancombc <- function(ancombc_res,
 
 ################################################################################
 #' Plot ANCOMBC2 result for phyloseq object
+#'
 #' @description
-#' `r lifecycle::badge("experimental")`
+#' <a href="https://adrientaudiere.github.io/MiscMetabar/articles/Rules.html#lifecycle">
+#' <img src="https://img.shields.io/badge/lifecycle-experimental-orange" alt="lifecycle-experimental"></a>
+#'
+#' Graphical representation of ANCOMBC2 result.
 #'
 #' @inheritParams clean_pq
 #' @param ancombc_res (required) the result of the ancombc_pq function
@@ -846,7 +874,7 @@ signif_ancombc <- function(ancombc_res,
 #'   (has q less than alpha)
 #' @param min_abs_lfc (integer, default 0) Minimum absolute value to filter
 #'   results based on Log Fold Change. For ex. a value of 1 filter out taxa
-#'   for which the abundance in a given level of the modality is not at least
+#'   for which the abundance in a given level of the modalty is not at least
 #'   the double of the abundance in the other level.
 #' @param tax_col The taxonomic level (must be present in `tax_table` slot)
 #'   to color the points
@@ -933,7 +961,7 @@ plot_ancombc_pq <-
       )
 
     taxtable <- data.frame(physeq@tax_table)
-    taxtable$taxon <- taxa_names(physeq)
+    taxtable$taxa <- taxa_names(physeq)
 
     df <-
       left_join(signif_ancombc_res, taxtable, by = join_by("taxon" == "taxon"))
@@ -997,8 +1025,9 @@ plot_ancombc_pq <-
 ################################################################################
 #' Show taxa which are present in only one given level of a modality
 #'
-#' @description
-#' `r lifecycle::badge("experimental")`
+#'
+#' <a href="https://adrientaudiere.github.io/MiscMetabar/articles/Rules.html#lifecycle">
+#' <img src="https://img.shields.io/badge/lifecycle-experimental-orange" alt="lifecycle-experimental"></a>
 #'
 #' @inheritParams clean_pq
 #' @param modality (required) The name of a column present in the `@sam_data` slot
@@ -1052,7 +1081,11 @@ taxa_only_in_one_level <- function(physeq,
 #' Distribution of sequences across a factor for one taxon
 #'
 #' @description
-#' `r lifecycle::badge("experimental")`
+#'
+#' <a href="https://adrientaudiere.github.io/MiscMetabar/articles/Rules.html#lifecycle">
+#' <img src="https://img.shields.io/badge/lifecycle-experimental-orange" alt="lifecycle-experimental"></a>
+#'
+#' Focus on one taxon and one factor.
 #'
 #' @inheritParams clean_pq
 #' @param fact (required) Name of the factor in `physeq@sam_data` used to plot
@@ -1112,7 +1145,10 @@ distri_1_taxa <- function(physeq, fact, taxa_name, digits = 2) {
 ################################################################################
 #' Partition the Variation of a phyloseq object by 2, 3, or 4 Explanatory Matrices
 #' @description
-#' `r lifecycle::badge("experimental")`
+#'
+#' <a href="https://adrientaudiere.github.io/MiscMetabar/articles/Rules.html#lifecycle">
+#' <img src="https://img.shields.io/badge/lifecycle-experimental-orange" alt="lifecycle-experimental"></a>
+#'
 #'   The function partitions the variation in otu_table using
 #'   distance (Bray per default) with respect to two, three, or four explanatory
 #'   tables, using
@@ -1173,7 +1209,7 @@ var_par_pq <-
       dist_physeq <- phyloseq::distance(physeq, method = dist_method)
     }
 
-    for (i in 1:length(list_component)) {
+    for (i in seq_along(list_component)) {
       assign(
         names(list_component)[i],
         as.data.frame(unclass(physeq@sam_data[, list_component[[i]]]))
@@ -1210,7 +1246,7 @@ var_par_pq <-
 
     if (dbrda_computation) {
       res_varpart$dbrda_result <- list()
-      for (i in 1:length(list_component)) {
+      for (i in seq_along(list_component)) {
         res_varpart$dbrda_result[[i]] <-
           anova(vegan::dbrda(
             as.formula(paste0(
@@ -1231,12 +1267,13 @@ var_par_pq <-
 ################################################################################
 #' Partition the Variation of a phyloseq object with rarefaction permutations
 #' @description
-#' `r lifecycle::badge("experimental")`
+#'
+#' <a href="https://adrientaudiere.github.io/MiscMetabar/articles/Rules.html#lifecycle">
+#' <img src="https://img.shields.io/badge/lifecycle-experimental-orange" alt="lifecycle-experimental"></a>
 #'
 #'   This is an extension of the function [var_par_pq()]. The main addition is
 #'   the computation of nperm permutations with rarefaction even depth by
 #'   sample. The return object
-#'
 #'
 #' @inheritParams clean_pq
 #' @param list_component (required) A named list of 2, 3 or four vectors with

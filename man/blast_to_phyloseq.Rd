@@ -2,7 +2,7 @@
 % Please edit documentation in R/blast.R
 \name{blast_to_phyloseq}
 \alias{blast_to_phyloseq}
-\title{Blast some sequence against \code{refseq} slot of a \code{\link{phyloseq-class}}
+\title{Blast some sequence against \code{refseq} slot of a \code{\link[phyloseq]{phyloseq-class}}
 object.}
 \usage{
 blast_to_phyloseq(
@@ -23,11 +23,11 @@ blast_to_phyloseq(
 )
 }
 \arguments{
-\item{physeq}{(required): a \code{\link{phyloseq-class}} object obtained
+\item{physeq}{(required): a \code{\link[phyloseq]{phyloseq-class}} object obtained
 using the \code{phyloseq} package.}
 
 \item{seq2search}{(required) path to a fasta file defining the sequences
-you want to blast against the ASV sequences from the physeq object.}
+you want to blast against the taxa (ASV, OTU) sequences from the physeq object.}
 
 \item{blastpath}{path to blast program}
 
@@ -75,7 +75,13 @@ for blastn command)}
 the blast table
 }
 \description{
-\ifelse{html}{\href{https://lifecycle.r-lib.org/articles/stages.html#maturing}{\figure{lifecycle-maturing.svg}{options: alt='[Maturing]'}}}{\strong{[Maturing]}}
+\if{html}{\out{
+<a href="https://adrientaudiere.github.io/MiscMetabar/articles/Rules.html#lifecycle">
+<img src="https://img.shields.io/badge/lifecycle-maturing-blue" alt="lifecycle-maturing"></a>
+}}
+
+
+Use the blast software.
 }
 \examples{
 \dontrun{

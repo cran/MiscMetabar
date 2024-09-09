@@ -15,7 +15,7 @@ ggscatt_pq(
 )
 }
 \arguments{
-\item{physeq}{(required): a \code{\link{phyloseq-class}} object obtained
+\item{physeq}{(required): a \code{\link[phyloseq]{phyloseq-class}} object obtained
 using the \code{phyloseq} package.}
 
 \item{num_modality}{(required) Name of the numeric column in
@@ -41,7 +41,11 @@ Either an unique ggplot2 object (if one_plot is TRUE) or
 a list of ggplot2 plot for each hill_scales.
 }
 \description{
-\ifelse{html}{\href{https://lifecycle.r-lib.org/articles/stages.html#experimental}{\figure{lifecycle-experimental.svg}{options: alt='[Experimental]'}}}{\strong{[Experimental]}}
+\if{html}{\out{
+<a href="https://adrientaudiere.github.io/MiscMetabar/articles/Rules.html#lifecycle">
+<img src="https://img.shields.io/badge/lifecycle-experimental-orange" alt="lifecycle-experimental"></a>
+}}
+
 
 Basically a wrapper of function \code{\link[ggstatsplot:ggscatterstats]{ggstatsplot::ggscatterstats()}} for
 object of class phyloseq and Hill number.

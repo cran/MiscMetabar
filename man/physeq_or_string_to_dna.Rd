@@ -8,7 +8,7 @@ or the \code{refseq} slot of a phyloseq-class object}
 physeq_or_string_to_dna(physeq = NULL, dna_seq = NULL)
 }
 \arguments{
-\item{physeq}{(required): a \code{\link{phyloseq-class}} object obtained
+\item{physeq}{(required): a \code{\link[phyloseq]{phyloseq-class}} object obtained
 using the \code{phyloseq} package.}
 
 \item{dna_seq}{You may directly use a character vector of DNA sequences
@@ -20,10 +20,14 @@ An object of class DNAStringSet (see the \code{\link[Biostrings:XStringSet-class
 function)
 }
 \description{
-\ifelse{html}{\href{https://lifecycle.r-lib.org/articles/stages.html#stable}{\figure{lifecycle-stable.svg}{options: alt='[Stable]'}}}{\strong{[Stable]}}
+\if{html}{\out{
+<a href="https://adrientaudiere.github.io/MiscMetabar/articles/Rules.html#lifecycle">
+<img src="https://img.shields.io/badge/lifecycle-stable-green" alt="lifecycle-stable"></a>
+}}
+
 
 Internally used in \code{\link[=vsearch_clustering]{vsearch_clustering()}}, \code{\link[=swarm_clustering]{swarm_clustering()}} and
-\code{\link[=asv2otu]{asv2otu()}}.
+\code{\link[=postcluster_pq]{postcluster_pq()}}.
 }
 \examples{
 

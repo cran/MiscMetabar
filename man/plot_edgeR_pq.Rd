@@ -15,7 +15,7 @@ plot_edgeR_pq(
 )
 }
 \arguments{
-\item{physeq}{(required): a \code{\link{phyloseq-class}} object obtained
+\item{physeq}{(required): a \code{\link[phyloseq]{phyloseq-class}} object obtained
 using the \code{phyloseq} package.}
 
 \item{contrast}{(required):This argument specifies what comparison
@@ -38,10 +38,16 @@ information during the computation}
 or \code{\link[ggplot2]{ggplot}}}
 }
 \value{
-A \code{\link{ggplot}}2 plot representing edgeR results
+A \code{\link[ggplot2]{ggplot}}2 plot representing edgeR results
 }
 \description{
-\ifelse{html}{\href{https://lifecycle.r-lib.org/articles/stages.html#maturing}{\figure{lifecycle-maturing.svg}{options: alt='[Maturing]'}}}{\strong{[Maturing]}}
+\if{html}{\out{
+<a href="https://adrientaudiere.github.io/MiscMetabar/articles/Rules.html#lifecycle">
+<img src="https://img.shields.io/badge/lifecycle-maturing-blue" alt="lifecycle-maturing"></a>
+}}
+
+
+Graphical representation of edgeR result.
 }
 \examples{
 \dontshow{if (tolower(Sys.info()[["sysname"]]) != "windows") (if (getRversion() >= "3.4") withAutoprint else force)(\{ # examplesIf}

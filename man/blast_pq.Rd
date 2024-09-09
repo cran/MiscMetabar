@@ -2,7 +2,7 @@
 % Please edit documentation in R/blast.R
 \name{blast_pq}
 \alias{blast_pq}
-\title{Blast all sequence of \code{refseq} slot of a \code{\link{phyloseq-class}}
+\title{Blast all sequence of \code{refseq} slot of a \code{\link[phyloseq]{phyloseq-class}}
 object against a custom database.}
 \usage{
 blast_pq(
@@ -23,7 +23,7 @@ blast_pq(
 )
 }
 \arguments{
-\item{physeq}{(required): a \code{\link{phyloseq-class}} object obtained
+\item{physeq}{(required): a \code{\link[phyloseq]{phyloseq-class}} object obtained
 using the \code{phyloseq} package.}
 
 \item{fasta_for_db}{path to a fasta file to make the blast database}
@@ -73,7 +73,13 @@ for blastn command)}
 a blast table
 }
 \description{
-\ifelse{html}{\href{https://lifecycle.r-lib.org/articles/stages.html#experimental}{\figure{lifecycle-experimental.svg}{options: alt='[Experimental]'}}}{\strong{[Experimental]}}
+\if{html}{\out{
+<a href="https://adrientaudiere.github.io/MiscMetabar/articles/Rules.html#lifecycle">
+<img src="https://img.shields.io/badge/lifecycle-experimental-orange" alt="lifecycle-experimental"></a>
+}}
+
+
+Use the blast software.
 }
 \seealso{
 \code{\link[=blast_to_phyloseq]{blast_to_phyloseq()}} to use \code{refseq}

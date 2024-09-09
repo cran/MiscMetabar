@@ -7,7 +7,7 @@
 subset_samples_pq(physeq, condition)
 }
 \arguments{
-\item{physeq}{(required): a \code{\link{phyloseq-class}} object obtained
+\item{physeq}{(required): a \code{\link[phyloseq]{phyloseq-class}} object obtained
 using the \code{phyloseq} package.}
 
 \item{condition}{A boolean vector to subset samples. Length must fit
@@ -17,7 +17,11 @@ the number of samples}
 a new phyloseq object
 }
 \description{
-\ifelse{html}{\href{https://lifecycle.r-lib.org/articles/stages.html#experimental}{\figure{lifecycle-experimental.svg}{options: alt='[Experimental]'}}}{\strong{[Experimental]}}
+\if{html}{\out{
+<a href="https://adrientaudiere.github.io/MiscMetabar/articles/Rules.html#lifecycle">
+<img src="https://img.shields.io/badge/lifecycle-experimental-orange" alt="lifecycle-experimental"></a>
+}}
+
 
 The main objective of this function is to complete the
 \code{\link[phyloseq:subset_samples-methods]{phyloseq::subset_samples()}} function by propose a more easy

@@ -8,7 +8,7 @@ created with \code{\link[=add_funguild_info]{add_funguild_info()}}}
 plot_guild_pq(physeq, levels_order = NULL, clean_pq = TRUE, ...)
 }
 \arguments{
-\item{physeq}{(required): a \code{\link{phyloseq-class}} object obtained
+\item{physeq}{(required): a \code{\link[phyloseq]{phyloseq-class}} object obtained
 using the \code{phyloseq} package.}
 
 \item{levels_order}{(Default NULL) A character vector to
@@ -24,7 +24,13 @@ object is cleaned using the \code{\link[=clean_pq]{clean_pq()}} function?}
 A ggplot2 object
 }
 \description{
-\ifelse{html}{\href{https://lifecycle.r-lib.org/articles/stages.html#experimental}{\figure{lifecycle-experimental.svg}{options: alt='[Experimental]'}}}{\strong{[Experimental]}}
+\if{html}{\out{
+<a href="https://adrientaudiere.github.io/MiscMetabar/articles/Rules.html#lifecycle">
+<img src="https://img.shields.io/badge/lifecycle-experimental-orange" alt="lifecycle-experimental"></a>
+}}
+
+
+Graphical function.
 }
 \examples{
 \donttest{

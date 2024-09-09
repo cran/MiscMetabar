@@ -18,7 +18,7 @@ swarm_clustering(
 )
 }
 \arguments{
-\item{physeq}{(required): a \code{\link{phyloseq-class}} object obtained
+\item{physeq}{(required): a \code{\link[phyloseq]{phyloseq-class}} object obtained
 using the \code{phyloseq} package.}
 
 \item{dna_seq}{NOT WORKING FOR THE MOMENT
@@ -59,7 +59,13 @@ A new object of class \code{physeq} or a list of cluster if dna_seq
 args was used.
 }
 \description{
-\ifelse{html}{\href{https://lifecycle.r-lib.org/articles/stages.html#maturing}{\figure{lifecycle-maturing.svg}{options: alt='[Maturing]'}}}{\strong{[Maturing]}}
+\if{html}{\out{
+<a href="https://adrientaudiere.github.io/MiscMetabar/articles/Rules.html#lifecycle">
+<img src="https://img.shields.io/badge/lifecycle-maturing-blue" alt="lifecycle-maturing"></a>
+}}
+
+
+A wrapper of SWARM software.
 }
 \details{
 This function use the \code{merge_taxa_vec} function to
@@ -104,5 +110,5 @@ More information in the associated publications
 \doi{doi:10.1093/bioinformatics/btab493} and \doi{doi:10.7717/peerj.593}
 }
 \seealso{
-\code{\link[=asv2otu]{asv2otu()}}, \code{\link[=vsearch_clustering]{vsearch_clustering()}}
+\code{\link[=postcluster_pq]{postcluster_pq()}}, \code{\link[=vsearch_clustering]{vsearch_clustering()}}
 }

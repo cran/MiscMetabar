@@ -2,6 +2,7 @@
 % Please edit documentation in R/blast.R
 \name{filter_asv_blast}
 \alias{filter_asv_blast}
+\alias{filter_taxa_blast}
 \title{Filter undesirable taxa using blast against a custom database.}
 \usage{
 filter_asv_blast(
@@ -16,9 +17,22 @@ filter_asv_blast(
   e_value_filter = 1e-30,
   ...
 )
+
+filter_taxa_blast(
+  physeq,
+  fasta_for_db = NULL,
+  database = NULL,
+  clean_pq = TRUE,
+  add_info_to_taxtable = TRUE,
+  id_filter = 90,
+  bit_score_filter = 50,
+  min_cover_filter = 50,
+  e_value_filter = 1e-30,
+  ...
+)
 }
 \arguments{
-\item{physeq}{(required): a \code{\link{phyloseq-class}} object obtained
+\item{physeq}{(required): a \code{\link[phyloseq]{phyloseq-class}} object obtained
 using the \code{phyloseq} package.}
 
 \item{fasta_for_db}{path to a fasta file to make the blast database}
@@ -26,7 +40,7 @@ using the \code{phyloseq} package.}
 \item{database}{path to a blast database}
 
 \item{clean_pq}{(logical)
-If set to TRUE, empty samples and empty ASV are discarded
+If set to TRUE, empty samples and empty taxa (ASV, OTU) are discarded
 after filtering.}
 
 \item{add_info_to_taxtable}{(logical, default TRUE) Does the blast information
@@ -52,8 +66,14 @@ Note that params \code{unique_per_seq} must be lft to TRUE and \code{score_filte
 must be left to FALSE.}
 }
 \value{
-A new \code{\link{phyloseq-class}} object.
+A new \code{\link[phyloseq]{phyloseq-class}} object.
 }
 \description{
-\ifelse{html}{\href{https://lifecycle.r-lib.org/articles/stages.html#experimental}{\figure{lifecycle-experimental.svg}{options: alt='[Experimental]'}}}{\strong{[Experimental]}}
+\if{html}{\out{
+<a href="https://adrientaudiere.github.io/MiscMetabar/articles/Rules.html#lifecycle">
+<img src="https://img.shields.io/badge/lifecycle-experimental-orange" alt="lifecycle-experimental"></a>
+}}
+
+
+Use the blast software.
 }

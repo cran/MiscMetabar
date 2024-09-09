@@ -2,13 +2,12 @@
 % Please edit documentation in R/controls.R
 \name{search_exact_seq_pq}
 \alias{search_exact_seq_pq}
-\title{Search for exact matching of sequences using complement,
-reverse and reverse-complement}
+\title{Search for exact matching of sequences}
 \usage{
 search_exact_seq_pq(physeq, seq2search)
 }
 \arguments{
-\item{physeq}{(required): a \code{\link{phyloseq-class}} object obtained
+\item{physeq}{(required): a \code{\link[phyloseq]{phyloseq-class}} object obtained
 using the \code{phyloseq} package.}
 
 \item{seq2search}{A DNAStringSet object of sequences to search for.}
@@ -20,7 +19,14 @@ number of occurrences of the original sequence, the complement sequence,
 the reverse sequence and the reverse-complement sequence.
 }
 \description{
-\ifelse{html}{\href{https://lifecycle.r-lib.org/articles/stages.html#experimental}{\figure{lifecycle-experimental.svg}{options: alt='[Experimental]'}}}{\strong{[Experimental]}}
+\if{html}{\out{
+<a href="https://adrientaudiere.github.io/MiscMetabar/articles/Rules.html#lifecycle">
+<img src="https://img.shields.io/badge/lifecycle-experimental-orange" alt="lifecycle-experimental"></a>
+}}
+
+
+Search for exact matching of sequences using complement,
+reverse and reverse-complement
 }
 \examples{
 data("data_fungi")

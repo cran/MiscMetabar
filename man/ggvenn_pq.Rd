@@ -2,7 +2,7 @@
 % Please edit documentation in R/plot_functions.R
 \name{ggvenn_pq}
 \alias{ggvenn_pq}
-\title{Venn diagram of \code{\link{phyloseq-class}} object using
+\title{Venn diagram of \code{\link[phyloseq]{phyloseq-class}} object using
 \code{ggVennDiagram::ggVennDiagram} function}
 \usage{
 ggvenn_pq(
@@ -19,7 +19,7 @@ ggvenn_pq(
 )
 }
 \arguments{
-\item{physeq}{(required): a \code{\link{phyloseq-class}} object obtained
+\item{physeq}{(required): a \code{\link[phyloseq]{phyloseq-class}} object obtained
 using the \code{phyloseq} package.}
 
 \item{fact}{(required): Name of the factor to cluster samples by modalities.
@@ -53,12 +53,16 @@ modalities of args \code{fact}.}
 for ex. \code{category.names}.}
 }
 \value{
-A \code{\link{ggplot}}2 plot representing Venn diagram of
+A \code{\link[ggplot2]{ggplot}}2 plot representing Venn diagram of
 modalities of the argument \code{factor} or if split_by is set a list
 of plots.
 }
 \description{
-\ifelse{html}{\href{https://lifecycle.r-lib.org/articles/stages.html#maturing}{\figure{lifecycle-maturing.svg}{options: alt='[Maturing]'}}}{\strong{[Maturing]}}
+\if{html}{\out{
+<a href="https://adrientaudiere.github.io/MiscMetabar/articles/Rules.html#lifecycle">
+<img src="https://img.shields.io/badge/lifecycle-maturing-blue" alt="lifecycle-maturing"></a>
+}}
+
 
 Note that you can use ggplot2 function to customize the plot
 for ex. \code{+ scale_fill_distiller(palette = "BuPu", direction = 1)}
@@ -74,7 +78,7 @@ if (requireNamespace("ggVennDiagram")) {
   ggvenn_pq(data_fungi, fact = "Height") +
     ggplot2::scale_fill_distiller(palette = "BuPu", direction = 1)
   pl <- ggvenn_pq(data_fungi, fact = "Height", split_by = "Time")
-  for (i in 1:length(pl)) {
+  for (i in seq_along(pl)) {
     p <- pl[[i]] +
       scale_fill_distiller(palette = "BuPu", direction = 1) +
       theme(plot.title = element_text(hjust = 0.5, size = 22))

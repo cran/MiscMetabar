@@ -7,7 +7,7 @@
 heat_tree_pq(physeq, taxonomic_level = NULL, ...)
 }
 \arguments{
-\item{physeq}{(required): a \code{\link{phyloseq-class}} object obtained
+\item{physeq}{(required): a \code{\link[phyloseq]{phyloseq-class}} object obtained
 using the \code{phyloseq} package.}
 
 \item{taxonomic_level}{(default: NULL): a vector of selected
@@ -20,7 +20,11 @@ their column numbers (e.g. taxonomic_level = 1:7)}
 A plot
 }
 \description{
-\ifelse{html}{\href{https://lifecycle.r-lib.org/articles/stages.html#maturing}{\figure{lifecycle-maturing.svg}{options: alt='[Maturing]'}}}{\strong{[Maturing]}}
+\if{html}{\out{
+<a href="https://adrientaudiere.github.io/MiscMetabar/articles/Rules.html#lifecycle">
+<img src="https://img.shields.io/badge/lifecycle-maturing-blue" alt="lifecycle-maturing"></a>
+}}
+
 
 Note that the number of ASV is store under the name \code{n_obs}
 and the number of sequences under the name \code{nb_sequences}

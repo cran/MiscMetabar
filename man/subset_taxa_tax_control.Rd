@@ -2,7 +2,7 @@
 % Please edit documentation in R/controls.R
 \name{subset_taxa_tax_control}
 \alias{subset_taxa_tax_control}
-\title{Subset taxa using a taxa control (e.g. truffle root tips) through 3 methods.}
+\title{Subset taxa using a taxa control or distribution based method}
 \usage{
 subset_taxa_tax_control(
   physeq,
@@ -12,14 +12,14 @@ subset_taxa_tax_control(
 )
 }
 \arguments{
-\item{physeq}{(required): a \code{\link{phyloseq-class}} object obtained
+\item{physeq}{(required): a \code{\link[phyloseq]{phyloseq-class}} object obtained
 using the \code{phyloseq} package.}
 
 \item{taxa_distri}{(required) a vector of length equal to the number of
-samples with the number of sequences per samples for the taxa control}
+samples with the number of sequences per sample for the taxa control}
 
 \item{method}{(default: "mean") a method to calculate the cut-off value.
-There is 6 available methods:
+There are 6 available methods:
 \enumerate{
 \item \code{cutoff_seq}: discard taxa with less than the number of sequence
 than taxa control,
@@ -35,13 +35,21 @@ than taxa control,
 Required if method is \code{cutoff_diff}, \code{min}, \code{max} or \code{mean}}
 }
 \value{
-A new \code{\link{phyloseq-class}} object.
+A new \code{\link[phyloseq]{phyloseq-class}} object.
 }
 \description{
-\ifelse{html}{\href{https://lifecycle.r-lib.org/articles/stages.html#experimental}{\figure{lifecycle-experimental.svg}{options: alt='[Experimental]'}}}{\strong{[Experimental]}}
+\if{html}{\out{
+<a href="https://adrientaudiere.github.io/MiscMetabar/articles/Rules.html#lifecycle">
+<img src="https://img.shields.io/badge/lifecycle-experimental-orange" alt="lifecycle-experimental"></a>
+}}
+
+
+There is 3 main methods : discard taxa (i) using a control taxa (e.g. truffle root tips),
+(ii) using a mixture models to detect bimodality in pseudo-abundance distribution or
+(iii) using a minimum difference threshold pseudo-abundance. Each cutoff is defined at
+the sample level.
 }
 \examples{
-
 
 subset_taxa_tax_control(data_fungi,
   as.numeric(data_fungi@otu_table[, 300]),

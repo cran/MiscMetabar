@@ -7,7 +7,7 @@
 rename_samples_otu_table(physeq, names_of_samples)
 }
 \arguments{
-\item{physeq}{(required): a \code{\link{phyloseq-class}} object obtained
+\item{physeq}{(required): a \code{\link[phyloseq]{phyloseq-class}} object obtained
 using the \code{phyloseq} package.}
 
 \item{names_of_samples}{(required) The new names of the samples}
@@ -16,7 +16,13 @@ using the \code{phyloseq} package.}
 the matrix with new colnames (or rownames if \code{taxa_are_rows} is true)
 }
 \description{
-\ifelse{html}{\href{https://lifecycle.r-lib.org/articles/stages.html#experimental}{\figure{lifecycle-experimental.svg}{options: alt='[Experimental]'}}}{\strong{[Experimental]}}
+\if{html}{\out{
+<a href="https://adrientaudiere.github.io/MiscMetabar/articles/Rules.html#lifecycle">
+<img src="https://img.shields.io/badge/lifecycle-experimental-orange" alt="lifecycle-experimental"></a>
+}}
+
+
+Useful for targets bioinformatic pipeline.
 }
 \examples{
 

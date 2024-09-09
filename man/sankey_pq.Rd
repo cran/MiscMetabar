@@ -2,7 +2,7 @@
 % Please edit documentation in R/plot_functions.R
 \name{sankey_pq}
 \alias{sankey_pq}
-\title{Sankey plot of \code{\link{phyloseq-class}} object}
+\title{Sankey plot of \code{\link[phyloseq]{phyloseq-class}} object}
 \usage{
 sankey_pq(
   physeq = NULL,
@@ -17,7 +17,7 @@ sankey_pq(
 )
 }
 \arguments{
-\item{physeq}{(required): a \code{\link{phyloseq-class}} object obtained
+\item{physeq}{(required): a \code{\link[phyloseq]{phyloseq-class}} object obtained
 using the \code{phyloseq} package.}
 
 \item{fact}{Name of the factor to cluster samples by modalities.
@@ -29,7 +29,7 @@ Need to be in \code{physeq@sam_data}.}
 number of OTUs (add_nb_seq = FALSE). Note that plotting the number of
 sequences is slower.}
 
-\item{min_prop_tax}{(default: 0) The minimum proportion for taxon to be
+\item{min_prop_tax}{(default: 0) The minimum proportion for taxa to be
 plotted. EXPERIMENTAL. For the moment each links below the min.prop.
 tax is discard from the sankey network resulting in sometimes weird plot.}
 
@@ -51,7 +51,13 @@ represent the distribution of the last taxonomic level in the modalities
 of \code{fact}
 }
 \description{
-\ifelse{html}{\href{https://lifecycle.r-lib.org/articles/stages.html#maturing}{\figure{lifecycle-maturing.svg}{options: alt='[Maturing]'}}}{\strong{[Maturing]}}
+\if{html}{\out{
+<a href="https://adrientaudiere.github.io/MiscMetabar/articles/Rules.html#lifecycle">
+<img src="https://img.shields.io/badge/lifecycle-maturing-blue" alt="lifecycle-maturing"></a>
+}}
+
+
+Graphical representation of distribution of taxa across Taxonomy and (optionnaly a factor).
 }
 \examples{
 data("GlobalPatterns", package = "phyloseq")

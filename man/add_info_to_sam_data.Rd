@@ -12,7 +12,7 @@ add_info_to_sam_data(
 )
 }
 \arguments{
-\item{physeq}{(required): a \code{\link{phyloseq-class}} object obtained
+\item{physeq}{(required): a \code{\link[phyloseq]{phyloseq-class}} object obtained
 using the \code{phyloseq} package.}
 
 \item{df_info}{: A dataframe with rownames matching for sample names of the
@@ -28,7 +28,11 @@ collecting the number of OTUs per sample?}
 A phyloseq object with an updated sam_data slot
 }
 \description{
-\ifelse{html}{\href{https://lifecycle.r-lib.org/articles/stages.html#experimental}{\figure{lifecycle-experimental.svg}{options: alt='[Experimental]'}}}{\strong{[Experimental]}}
+\if{html}{\out{
+<a href="https://adrientaudiere.github.io/MiscMetabar/articles/Rules.html#lifecycle">
+<img src="https://img.shields.io/badge/lifecycle-experimental-orange" alt="lifecycle-experimental"></a>
+}}
+
 
 Warning: The value nb_seq and nb_otu may be outdated if you transform your
 phyloseq object, e.g. using the \code{\link[=subset_taxa_pq]{subset_taxa_pq()}} function

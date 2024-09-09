@@ -1,7 +1,7 @@
 Package: MiscMetabar
 Type: Package
 Title: Miscellaneous Functions for Metabarcoding Analysis
-Version: 0.9.1
+Version: 0.9.3
 Authors@R: person("Adrien", "Taudière", email = "adrien.taudiere@zaclys.net",
   role = c("aut", "cre", "cph"), comment = c(ORCID = "0000-0003-1088-1182"))
 Description: Facilitate the description, transformation, exploration, and reproducibility of metabarcoding analyses. 'MiscMetabar' is mainly built on top of the 'phyloseq', 'dada2' and 'targets' R packages. It helps to build reproducible and robust bioinformatics pipelines in R. 'MiscMetabar' makes ecological analysis of alpha and beta-diversity easier, more reproducible and more powerful by integrating a large number of tools. Important features are described in Taudière A. (2023) <doi:10.21105/joss.06038>.
@@ -21,7 +21,7 @@ Suggests: adespatial, ANCOMBC, BiocManager, Biostrings, circlize,
         rotl, Rtsne, scales, seqinr, SRS, stringr,
         SummarizedExperiment, testthat (>= 3.0.0), tibble, tidyr,
         treemapify, vegan, venneuler, vctrs, viridis, withr
-RoxygenNote: 7.3.1
+RoxygenNote: 7.3.2
 URL: https://github.com/adrientaudiere/MiscMetabar,
         https://adrientaudiere.github.io/MiscMetabar/
 biocViews: Sequencing, Microbiome, Metagenomics, Clustering,
@@ -33,9 +33,9 @@ Config/testthat/parallel: true
 VignetteBuilder: knitr
 Language: en-US
 NeedsCompilation: no
-Packaged: 2024-04-28 12:49:09 UTC; adrien
+Packaged: 2024-09-09 08:56:12 UTC; adrien
 Author: Adrien Taudière [aut, cre, cph]
     (<https://orcid.org/0000-0003-1088-1182>)
 Maintainer: Adrien Taudière <adrien.taudiere@zaclys.net>
 Repository: CRAN
-Date/Publication: 2024-04-28 14:10:07 UTC
+Date/Publication: 2024-09-09 09:20:01 UTC

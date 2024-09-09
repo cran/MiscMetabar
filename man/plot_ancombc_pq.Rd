@@ -18,7 +18,7 @@ plot_ancombc_pq(
 )
 }
 \arguments{
-\item{physeq}{(required): a \code{\link{phyloseq-class}} object obtained
+\item{physeq}{(required): a \code{\link[phyloseq]{phyloseq-class}} object obtained
 using the \code{phyloseq} package.}
 
 \item{ancombc_res}{(required) the result of the ancombc_pq function
@@ -34,7 +34,7 @@ diff? The diff value is TRUE if the taxon is significant
 
 \item{min_abs_lfc}{(integer, default 0) Minimum absolute value to filter
 results based on Log Fold Change. For ex. a value of 1 filter out taxa
-for which the abundance in a given level of the modality is not at least
+for which the abundance in a given level of the modalty is not at least
 the double of the abundance in the other level.}
 
 \item{tax_col}{The taxonomic level (must be present in \code{tax_table} slot)
@@ -56,7 +56,13 @@ A ggplot2 object. If add_marginal_vioplot is TRUE, this is a
 patchworks of plot made using \code{patchwork::plot_layout()}.
 }
 \description{
-\ifelse{html}{\href{https://lifecycle.r-lib.org/articles/stages.html#experimental}{\figure{lifecycle-experimental.svg}{options: alt='[Experimental]'}}}{\strong{[Experimental]}}
+\if{html}{\out{
+<a href="https://adrientaudiere.github.io/MiscMetabar/articles/Rules.html#lifecycle">
+<img src="https://img.shields.io/badge/lifecycle-experimental-orange" alt="lifecycle-experimental"></a>
+}}
+
+
+Graphical representation of ANCOMBC2 result.
 }
 \details{
 This function is mainly a wrapper of the work of others.

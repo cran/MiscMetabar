@@ -1,7 +1,13 @@
 ################################################################################
-#' Make a datatable with the taxonomy of a \code{\link{phyloseq-class}} object
+#' Make a datatable with the taxonomy of a \code{\link[phyloseq]{phyloseq-class}} object
+#'
 #' @description
-#' `r lifecycle::badge("maturing")`
+#'
+#' <a href="https://adrientaudiere.github.io/MiscMetabar/articles/Rules.html#lifecycle">
+#' <img src="https://img.shields.io/badge/lifecycle-maturing-blue" alt="lifecycle-maturing"></a>
+#'
+#' An interactive table for phyloseq taxonomy.
+#'
 #' @inheritParams clean_pq
 #' @param abundance (default: TRUE) Does the number of sequences is print
 #' @param taxonomic_level (default: NULL) a vector of selected taxonomic
@@ -9,7 +15,6 @@
 #' @param modality (default: NULL) A sample modality to split
 #' OTU abundancy by level of the modality
 #' @param ... Other argument for the datatable function
-#'
 #'
 #' @author Adrien Taudière
 #' @return A datatable
@@ -93,7 +98,11 @@ tax_datatable <- function(physeq,
 #' Compare samples in pairs using diversity and number of ASV including
 #' shared ASV.
 #' @description
-#' `r lifecycle::badge("experimental")` #'   For the moment refseq slot need to be not Null.
+#'
+#' <a href="https://adrientaudiere.github.io/MiscMetabar/articles/Rules.html#lifecycle">
+#' <img src="https://img.shields.io/badge/lifecycle-experimental-orange" alt="lifecycle-experimental"></a>
+#'
+#' For the moment refseq slot need to be not Null.
 #'
 #' @inheritParams clean_pq
 #' @param bifactor (required) a factor (present in the `sam_data` slot of
@@ -266,9 +275,14 @@ compare_pairs_pq <- function(physeq = NULL,
 
 
 ################################################################################
-#' Create an visualization table to describe taxa distribution across a modality
+#' Create a visualization table to describe taxa distribution across a modality
+#'
 #' @description
-#' `r lifecycle::badge("maturing")`
+#' <a href="https://adrientaudiere.github.io/MiscMetabar/articles/Rules.html#lifecycle">
+#' <img src="https://img.shields.io/badge/lifecycle-maturing-blue" alt="lifecycle-maturing"></a>
+#'
+#' Allow to visualize a table with graphical input.
+#'
 #' @inheritParams clean_pq
 #' @param modality (required) The name of a column present in the `@sam_data` slot
 #'   of the physeq object. Must be a character vector or a factor.

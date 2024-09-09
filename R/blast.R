@@ -1,13 +1,18 @@
 ################################################################################
-#' Blast some sequence against `refseq` slot of a \code{\link{phyloseq-class}}
+#' Blast some sequence against `refseq` slot of a \code{\link[phyloseq]{phyloseq-class}}
 #'   object.
 #'
-#' `r lifecycle::badge("maturing")`
+#' @description
 #'
-#' @param physeq (required): a \code{\link{phyloseq-class}} object obtained
+#' <a href="https://adrientaudiere.github.io/MiscMetabar/articles/Rules.html#lifecycle">
+#' <img src="https://img.shields.io/badge/lifecycle-maturing-blue" alt="lifecycle-maturing"></a>
+#'
+#' Use the blast software.
+#'
+#' @param physeq (required): a \code{\link[phyloseq]{phyloseq-class}} object obtained
 #'   using the `phyloseq` package.
 #' @param seq2search (required) path to a fasta file defining the sequences
-#'   you want to blast against the ASV sequences from the physeq object.
+#'   you want to blast against the taxa (ASV, OTU) sequences from the physeq object.
 #' @param blastpath path to blast program
 #' @param id_cut (default: 90) cut of in identity percent to keep result
 #' @param bit_score_cut (default: 50) cut of in bit score to keep result
@@ -176,10 +181,15 @@ blast_to_phyloseq <- function(physeq,
 
 
 ################################################################################
-#' Blast all sequence of `refseq` slot of a \code{\link{phyloseq-class}}
+#' Blast all sequence of `refseq` slot of a \code{\link[phyloseq]{phyloseq-class}}
 #'   object against a custom database.
 #'
-#' `r lifecycle::badge("experimental")`
+#' @description
+#'
+#' <a href="https://adrientaudiere.github.io/MiscMetabar/articles/Rules.html#lifecycle">
+#' <img src="https://img.shields.io/badge/lifecycle-experimental-orange" alt="lifecycle-experimental"></a>
+#'
+#' Use the blast software.
 #'
 #' @inheritParams blast_to_phyloseq
 #' @param fasta_for_db path to a fasta file to make the blast database
@@ -328,18 +338,21 @@ blast_pq <- function(physeq,
   return(blast_tab)
 }
 
-
-
 ################################################################################
 #' Filter undesirable taxa using blast against a custom database.
 #'
-#' `r lifecycle::badge("experimental")`
+#' @description
+#'
+#' <a href="https://adrientaudiere.github.io/MiscMetabar/articles/Rules.html#lifecycle">
+#' <img src="https://img.shields.io/badge/lifecycle-experimental-orange" alt="lifecycle-experimental"></a>
+#'
+#' Use the blast software.
 #'
 #' @inheritParams blast_to_phyloseq
 #' @param fasta_for_db path to a fasta file to make the blast database
 #' @param database path to a blast database
 #' @param clean_pq (logical)
-#'   If set to TRUE, empty samples and empty ASV are discarded
+#'   If set to TRUE, empty samples and empty taxa (ASV, OTU) are discarded
 #'   after filtering.
 #' @param id_filter (default: 90) cut of in identity percent to keep result
 #' @param bit_score_filter (default: 50) cut of in bit score to keep result
@@ -358,7 +371,7 @@ blast_pq <- function(physeq,
 #'   Note that params `unique_per_seq` must be lft to TRUE and `score_filter`
 #'   must be left to FALSE.
 #' @export
-#' @return A new \code{\link{phyloseq-class}} object.
+#' @return A new \code{\link[phyloseq]{phyloseq-class}} object.
 
 
 filter_asv_blast <- function(physeq,
@@ -417,16 +430,27 @@ filter_asv_blast <- function(physeq,
 }
 
 
-#' Blast some sequence against sequences from of a \code{\link{derep-class}}
+################################################################################
+#' @rdname filter_asv_blast
+#' @export
+filter_taxa_blast <- filter_asv_blast
+################################################################################
+
+
+#' Blast some sequence against sequences from of a \code{\link[dada2]{derep-class}}
 #'   object.
 #'
-#' `r lifecycle::badge("experimental")`
+#' @description
+#' <a href="https://adrientaudiere.github.io/MiscMetabar/articles/Rules.html#lifecycle">
+#' <img src="https://img.shields.io/badge/lifecycle-experimental-orange" alt="lifecycle-experimental"></a>
+#'
+#' Use the blast software.
 #'
 #' @inheritParams blast_to_phyloseq
 #' @param derep The result of `dada2::derepFastq()`. A list of `derep-class`
 #'   object.
 #' @param seq2search (required) path to a fasta file defining the sequences
-#'   you want to blast against the ASV sequences from the physeq object.
+#'   you want to blast against the taxa (ASV, OTU) sequences from the physeq object.
 #' @param min_length_seq (default: 200) Removed sequences with less than
 #'   `min_length_seq` from derep before blast. Set to 0 to discard filtering
 #'    sequences by length.
@@ -594,7 +618,9 @@ blast_to_derep <- function(derep,
 #' Add information from [blast_pq()] to the `tax_table` slot of a *phyloseq* object
 #'
 #' @description
-#' `r lifecycle::badge("experimental")`
+#'
+#' <a href="https://adrientaudiere.github.io/MiscMetabar/articles/Rules.html#lifecycle">
+#' <img src="https://img.shields.io/badge/lifecycle-experimental-orange" alt="lifecycle-experimental"></a>
 #'
 #' Basically a wrapper of [blast_pq()] with option `unique_per_seq = TRUE` and
 #'  `score_filter = FALSE`.
@@ -605,7 +631,7 @@ blast_to_derep <- function(derep,
 #' @param fasta_for_db path to a fasta file to make the blast database
 #' @param silent (logical) If true, no message are printing.
 #' @param ... Other arguments passed on to [blast_pq()] function.
-#' @return A new \code{\link{phyloseq-class}} object with more information in tax_table based on a
+#' @return A new \code{\link[phyloseq]{phyloseq-class}} object with more information in tax_table based on a
 #'   blast on a given database
 #'
 #' @export

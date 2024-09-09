@@ -7,7 +7,7 @@
 SRS_curve_pq(physeq, clean_pq = FALSE, ...)
 }
 \arguments{
-\item{physeq}{(required): a \code{\link{phyloseq-class}} object obtained
+\item{physeq}{(required): a \code{\link[phyloseq]{phyloseq-class}} object obtained
 using the \code{phyloseq} package.}
 
 \item{clean_pq}{(logical): Does the phyloseq
@@ -19,7 +19,13 @@ object is cleaned using the \code{\link[=clean_pq]{clean_pq()}} function?}
 A plot
 }
 \description{
-\ifelse{html}{\href{https://lifecycle.r-lib.org/articles/stages.html#experimental}{\figure{lifecycle-experimental.svg}{options: alt='[Experimental]'}}}{\strong{[Experimental]}}
+\if{html}{\out{
+<a href="https://adrientaudiere.github.io/MiscMetabar/articles/Rules.html#lifecycle">
+<img src="https://img.shields.io/badge/lifecycle-experimental-orange" alt="lifecycle-experimental"></a>
+}}
+
+
+A wraper of \code{\link[SRS:SRScurve]{SRS::SRScurve()}} function.
 }
 \examples{
 if (requireNamespace("SRS")) {

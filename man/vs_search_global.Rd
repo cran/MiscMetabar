@@ -16,7 +16,7 @@ vs_search_global(
 )
 }
 \arguments{
-\item{physeq}{(required): a \code{\link{phyloseq-class}} object obtained
+\item{physeq}{(required): a \code{\link[phyloseq]{phyloseq-class}} object obtained
 using the \code{phyloseq} package.}
 
 \item{seq2search}{(required if path_to_fasta is NULL) Either (i) a DNAstringSet object
@@ -42,7 +42,13 @@ or (ii) a character vector that will be convert to DNAstringSet using
 A dataframe with uc results (invisible)
 }
 \description{
-\ifelse{html}{\href{https://lifecycle.r-lib.org/articles/stages.html#maturing}{\figure{lifecycle-maturing.svg}{options: alt='[Maturing]'}}}{\strong{[Maturing]}}
+\if{html}{\out{
+<a href="https://adrientaudiere.github.io/MiscMetabar/articles/Rules.html#lifecycle">
+<img src="https://img.shields.io/badge/lifecycle-maturing-blue" alt="lifecycle-maturing"></a>
+}}
+
+
+Use of VSEARCH software.
 }
 \details{
 This function is mainly a wrapper of the work of others.

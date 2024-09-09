@@ -18,7 +18,7 @@ var_par_rarperm_pq(
 )
 }
 \arguments{
-\item{physeq}{(required): a \code{\link{phyloseq-class}} object obtained
+\item{physeq}{(required): a \code{\link[phyloseq]{phyloseq-class}} object obtained
 using the \code{phyloseq} package.}
 
 \item{list_component}{(required) A named list of 2, 3 or four vectors with
@@ -57,7 +57,11 @@ Adj.R.squared_quantil_min and Adj.R.squared_quantil_max represent
 the quantile values of adjuste R squared
 }
 \description{
-\ifelse{html}{\href{https://lifecycle.r-lib.org/articles/stages.html#experimental}{\figure{lifecycle-experimental.svg}{options: alt='[Experimental]'}}}{\strong{[Experimental]}}
+\if{html}{\out{
+<a href="https://adrientaudiere.github.io/MiscMetabar/articles/Rules.html#lifecycle">
+<img src="https://img.shields.io/badge/lifecycle-experimental-orange" alt="lifecycle-experimental"></a>
+}}
+
 
 This is an extension of the function \code{\link[=var_par_pq]{var_par_pq()}}. The main addition is
 the computation of nperm permutations with rarefaction even depth by

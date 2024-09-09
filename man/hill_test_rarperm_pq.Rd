@@ -19,7 +19,7 @@ hill_test_rarperm_pq(
 )
 }
 \arguments{
-\item{physeq}{(required): a \code{\link{phyloseq-class}} object obtained
+\item{physeq}{(required): a \code{\link[phyloseq]{phyloseq-class}} object obtained
 using the \code{phyloseq} package.}
 
 \item{fact}{(required) Name of the factor in \code{physeq@sam_data} used to plot
@@ -54,7 +54,7 @@ test as significant int the \code{prop_signif} result.}
 \item "bayes"
 }}
 
-\item{...}{Others arguments passed on to \code{\link[ggstatsplot:ggbetweenstats]{ggstatsplot::ggbetweenstats()}} function}
+\item{...}{Other arguments passed on to \code{\link[ggstatsplot:ggbetweenstats]{ggstatsplot::ggbetweenstats()}} function}
 }
 \value{
 A list of 6 components :
@@ -68,7 +68,13 @@ A list of 6 components :
 }
 }
 \description{
-\ifelse{html}{\href{https://lifecycle.r-lib.org/articles/stages.html#experimental}{\figure{lifecycle-experimental.svg}{options: alt='[Experimental]'}}}{\strong{[Experimental]}}
+\if{html}{\out{
+<a href="https://adrientaudiere.github.io/MiscMetabar/articles/Rules.html#lifecycle">
+<img src="https://img.shields.io/badge/lifecycle-experimental-orange" alt="lifecycle-experimental"></a>
+}}
+
+
+This reduce the risk of a random drawing of a exceptional situation of an unique rarefaction.
 }
 \examples{
 \donttest{

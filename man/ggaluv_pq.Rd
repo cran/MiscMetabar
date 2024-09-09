@@ -22,7 +22,7 @@ ggaluv_pq(
 )
 }
 \arguments{
-\item{physeq}{(required): a \code{\link{phyloseq-class}} object obtained
+\item{physeq}{(required): a \code{\link[phyloseq]{phyloseq-class}} object obtained
 using the \code{phyloseq} package.}
 
 \item{taxa_ranks}{A vector of taxonomic ranks. For examples c("Family","Genus").
@@ -33,7 +33,7 @@ If taxa ranks is not set
 which samples to merge using \code{\link[=merge_samples2]{merge_samples2()}} function.
 Need to be in \code{physeq@sam_data}.
 Need to be use when you want to wrap by factor the final plot
-with the number of taxa (type="nb_asv")}
+with the number of taxa (type="nb_taxa")}
 
 \item{by_sample}{(logical) If FALSE (default), sample information is not taking
 into account, so the taxonomy is studied globally. If fact is not NULL, by_sample
@@ -45,7 +45,7 @@ samples using \code{\link[phyloseq:rarefy_even_depth]{phyloseq::rarefy_even_dept
 \item{fact}{(required) Name of the factor in \code{physeq@sam_data} used to plot  the last column}
 
 \item{type}{If "nb_seq" (default), the number of sequences is
-used in plot. If "nb_asv", the number of ASV is plotted.}
+used in plot. If "nb_taxa", the number of ASV is plotted.}
 
 \item{width}{(passed on to \code{\link[ggalluvial:geom_flow]{ggalluvial::geom_flow()}}) the width of each stratum,
 as a proportion of the distance between axes. Defaults to 1/3.}
@@ -69,7 +69,11 @@ NA in the variables set in formula.}
 A ggplot object
 }
 \description{
-\ifelse{html}{\href{https://lifecycle.r-lib.org/articles/stages.html#experimental}{\figure{lifecycle-experimental.svg}{options: alt='[Experimental]'}}}{\strong{[Experimental]}}
+\if{html}{\out{
+<a href="https://adrientaudiere.github.io/MiscMetabar/articles/Rules.html#lifecycle">
+<img src="https://img.shields.io/badge/lifecycle-experimental-orange" alt="lifecycle-experimental"></a>
+}}
+
 
 Basically a wrapper of \href{https://corybrunson.github.io/ggalluvial/index.html}{ggalluvial}
 package
@@ -85,14 +89,14 @@ if (requireNamespace("ggalluvial")) {
 }
 \donttest{
 if (requireNamespace("ggalluvial")) {
-  ggaluv_pq(data_fungi_mini, type = "nb_asv")
+  ggaluv_pq(data_fungi_mini, type = "nb_taxa")
 
-  ggaluv_pq(data_fungi_mini, wrap_factor = "Height", by_sample = TRUE, type = "nb_asv") +
+  ggaluv_pq(data_fungi_mini, wrap_factor = "Height", by_sample = TRUE, type = "nb_taxa") +
     facet_wrap("Height")
 
   ggaluv_pq(data_fungi_mini,
     width = 0.9, min.size = 10,
-    type = "nb_asv", taxa_ranks = c("Phylum", "Class", "Order", "Family", "Genus")
+    type = "nb_taxa", taxa_ranks = c("Phylum", "Class", "Order", "Family", "Genus")
   ) +
     coord_flip() + scale_x_discrete(limits = rev)
 }

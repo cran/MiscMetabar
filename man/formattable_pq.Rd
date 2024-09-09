@@ -2,7 +2,7 @@
 % Please edit documentation in R/table_functions.R
 \name{formattable_pq}
 \alias{formattable_pq}
-\title{Create an visualization table to describe taxa distribution across a modality}
+\title{Create a visualization table to describe taxa distribution across a modality}
 \usage{
 formattable_pq(
   physeq,
@@ -19,7 +19,7 @@ formattable_pq(
 )
 }
 \arguments{
-\item{physeq}{(required): a \code{\link{phyloseq-class}} object obtained
+\item{physeq}{(required): a \code{\link[phyloseq]{phyloseq-class}} object obtained
 using the \code{phyloseq} package.}
 
 \item{modality}{(required) The name of a column present in the \verb{@sam_data} slot
@@ -55,7 +55,13 @@ with NA in the \code{split_by} variable of the \code{physeq@sam_data} slot}
 A datatable
 }
 \description{
-\ifelse{html}{\href{https://lifecycle.r-lib.org/articles/stages.html#maturing}{\figure{lifecycle-maturing.svg}{options: alt='[Maturing]'}}}{\strong{[Maturing]}}
+\if{html}{\out{
+<a href="https://adrientaudiere.github.io/MiscMetabar/articles/Rules.html#lifecycle">
+<img src="https://img.shields.io/badge/lifecycle-maturing-blue" alt="lifecycle-maturing"></a>
+}}
+
+
+Allow to visualize a table with graphical input.
 }
 \details{
 This function is mainly a wrapper of the work of others.

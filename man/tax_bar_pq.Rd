@@ -13,7 +13,7 @@ tax_bar_pq(
 )
 }
 \arguments{
-\item{physeq}{(required): a \code{\link{phyloseq-class}} object obtained
+\item{physeq}{(required): a \code{\link[phyloseq]{phyloseq-class}} object obtained
 using the \code{phyloseq} package.}
 
 \item{fact}{Name of the factor to cluster samples by modalities.
@@ -30,11 +30,17 @@ is count. Concretely, physeq otu_table is transformed in a binary
 otu_table (each value different from zero is set to one)}
 }
 \value{
-A \code{\link{ggplot}}2 plot  with bar representing the number of sequence en each
+A \code{\link[ggplot2]{ggplot}}2 plot  with bar representing the number of sequence en each
 taxonomic groups
 }
 \description{
-\ifelse{html}{\href{https://lifecycle.r-lib.org/articles/stages.html#experimental}{\figure{lifecycle-experimental.svg}{options: alt='[Experimental]'}}}{\strong{[Experimental]}}
+\if{html}{\out{
+<a href="https://adrientaudiere.github.io/MiscMetabar/articles/Rules.html#lifecycle">
+<img src="https://img.shields.io/badge/lifecycle-experimental-orange" alt="lifecycle-experimental"></a>
+}}
+
+
+Graphical representation of distribution of taxonomy, optionnaly across a factor.
 }
 \examples{
 

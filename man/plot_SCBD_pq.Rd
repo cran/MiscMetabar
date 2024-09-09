@@ -6,14 +6,14 @@
 \usage{
 plot_SCBD_pq(
   physeq,
-  tax_level = "ASV",
+  tax_level = "Taxa",
   tax_col = "Order",
   min_SCBD = 0.01,
   ...
 )
 }
 \arguments{
-\item{physeq}{(required): a \code{\link{phyloseq-class}} object obtained
+\item{physeq}{(required): a \code{\link[phyloseq]{phyloseq-class}} object obtained
 using the \code{phyloseq} package.}
 
 \item{tax_level}{Taxonomic level to used in y axis}
@@ -23,13 +23,17 @@ using the \code{phyloseq} package.}
 \item{min_SCBD}{(default 0.01) the minimum SCBD value
 to plot the taxa}
 
-\item{...}{Others arguments passed on to \code{\link[adespatial:beta.div]{adespatial::beta.div()}} function}
+\item{...}{Other arguments passed on to \code{\link[adespatial:beta.div]{adespatial::beta.div()}} function}
 }
 \value{
 A ggplot2 object build with the package patchwork
 }
 \description{
-\ifelse{html}{\href{https://lifecycle.r-lib.org/articles/stages.html#experimental}{\figure{lifecycle-experimental.svg}{options: alt='[Experimental]'}}}{\strong{[Experimental]}}
+\if{html}{\out{
+<a href="https://adrientaudiere.github.io/MiscMetabar/articles/Rules.html#lifecycle">
+<img src="https://img.shields.io/badge/lifecycle-experimental-orange" alt="lifecycle-experimental"></a>
+}}
+
 
 A wrapper for the \code{\link[adespatial:beta.div]{adespatial::beta.div()}} function in the case of \code{physeq}
 object.

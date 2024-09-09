@@ -15,7 +15,7 @@ upset_test_pq(
 )
 }
 \arguments{
-\item{physeq}{(required): a \code{\link{phyloseq-class}} object obtained
+\item{physeq}{(required): a \code{\link[phyloseq]{phyloseq-class}} object obtained
 using the \code{phyloseq} package.}
 
 \item{fact}{(required): Name of the factor to cluster samples by modalities.
@@ -38,10 +38,16 @@ useful only for complex plot (see examples)}
 \item{...}{Other arguments passed on to the \code{\link[ComplexUpset:upset_test]{ComplexUpset::upset_test()}}}
 }
 \value{
-A \code{\link{ggplot}}2 plot
+A \code{\link[ggplot2]{ggplot}}2 plot
 }
 \description{
-\ifelse{html}{\href{https://lifecycle.r-lib.org/articles/stages.html#experimental}{\figure{lifecycle-experimental.svg}{options: alt='[Experimental]'}}}{\strong{[Experimental]}}
+\if{html}{\out{
+<a href="https://adrientaudiere.github.io/MiscMetabar/articles/Rules.html#lifecycle">
+<img src="https://img.shields.io/badge/lifecycle-experimental-orange" alt="lifecycle-experimental"></a>
+}}
+
+
+See \code{\link[=upset_pq]{upset_pq()}} to plot upset.
 }
 \examples{
 data(data_fungi)

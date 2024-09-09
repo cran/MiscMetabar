@@ -31,7 +31,13 @@ a list of one (single end) or two (paired end) list of files
 files are sorted by names (default behavior of \code{list.files()})
 }
 \description{
-\ifelse{html}{\href{https://lifecycle.r-lib.org/articles/stages.html#maturing}{\figure{lifecycle-maturing.svg}{options: alt='[Maturing]'}}}{\strong{[Maturing]}}
+\if{html}{\out{
+<a href="https://adrientaudiere.github.io/MiscMetabar/articles/Rules.html#lifecycle">
+<img src="https://img.shields.io/badge/lifecycle-maturing-blue" alt="lifecycle-maturing"></a>
+}}
+
+
+Useful for targets bioinformatic pipeline.
 }
 \examples{
 list_fastq_files("extdata")

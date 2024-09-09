@@ -10,7 +10,7 @@ add_funguild_info(
 )
 }
 \arguments{
-\item{physeq}{(required): a \code{\link{phyloseq-class}} object obtained
+\item{physeq}{(required): a \code{\link[phyloseq]{phyloseq-class}} object obtained
 using the \code{phyloseq} package.}
 
 \item{taxLevels}{Name of the 7 columns in tax_table required by funguild}
@@ -20,14 +20,18 @@ A new object of class \code{physeq} with Guild information added to
 \code{tax_table} slot
 }
 \description{
-\ifelse{html}{\href{https://lifecycle.r-lib.org/articles/stages.html#experimental}{\figure{lifecycle-experimental.svg}{options: alt='[Experimental]'}}}{\strong{[Experimental]}}
+\if{html}{\out{
+<a href="https://adrientaudiere.github.io/MiscMetabar/articles/Rules.html#lifecycle">
+<img src="https://img.shields.io/badge/lifecycle-experimental-orange" alt="lifecycle-experimental"></a>
+}}
+
 
 Please cite Nguyen et al. 2016 (\doi{doi:10.1016/j.funeco.2015.06.006})
 }
 \details{
 This function is mainly a wrapper of the work of others.
 Please make a reference to \code{FUNGuildR} package and the associate
-\href{https://www.sciencedirect.com/science/article/abs/pii/S1754504815000847}{publication} if you
+publication (\doi{10.1016/j.funeco.2015.06.006}) if you
 use this function.
 }
 \examples{

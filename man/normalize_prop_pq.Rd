@@ -7,7 +7,7 @@
 normalize_prop_pq(physeq, base_log = 2, constante = 10000, digits = 4)
 }
 \arguments{
-\item{physeq}{(required): a \code{\link{phyloseq-class}} object obtained
+\item{physeq}{(required): a \code{\link[phyloseq]{phyloseq-class}} object obtained
 using the \code{phyloseq} package.}
 
 \item{base_log}{(integer, default 2) the base for log-transformation. If
@@ -19,11 +19,15 @@ set to NULL or NA, no log-transformation is compute after normalization.}
 to be used (see \code{?round} for more information)}
 }
 \value{
-A new \code{\link{phyloseq-class}} object with otu_table count
+A new \code{\link[phyloseq]{phyloseq-class}} object with otu_table count
 normalize and log transformed (if base_log is an integer)
 }
 \description{
-\ifelse{html}{\href{https://lifecycle.r-lib.org/articles/stages.html#experimental}{\figure{lifecycle-experimental.svg}{options: alt='[Experimental]'}}}{\strong{[Experimental]}}
+\if{html}{\out{
+<a href="https://adrientaudiere.github.io/MiscMetabar/articles/Rules.html#lifecycle">
+<img src="https://img.shields.io/badge/lifecycle-experimental-orange" alt="lifecycle-experimental"></a>
+}}
+
 
 This function implement the method proposed by
 McKnight et al. 2018 (\doi{doi:10.5061/dryad.tn8qs35})

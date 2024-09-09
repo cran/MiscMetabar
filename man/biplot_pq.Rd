@@ -31,7 +31,7 @@ biplot_pq(
 )
 }
 \arguments{
-\item{physeq}{(required): a \code{\link{phyloseq-class}} object obtained
+\item{physeq}{(required): a \code{\link[phyloseq]{phyloseq-class}} object obtained
 using the \code{phyloseq} package.}
 
 \item{fact}{(default: NULL) Name of the factor in \code{physeq@sam_data}.
@@ -95,7 +95,13 @@ a interactive ggplot.}
 A plot
 }
 \description{
-\ifelse{html}{\href{https://lifecycle.r-lib.org/articles/stages.html#maturing}{\figure{lifecycle-maturing.svg}{options: alt='[Maturing]'}}}{\strong{[Maturing]}}
+\if{html}{\out{
+<a href="https://adrientaudiere.github.io/MiscMetabar/articles/Rules.html#lifecycle">
+<img src="https://img.shields.io/badge/lifecycle-maturing-blue" alt="lifecycle-maturing"></a>
+}}
+
+
+Graphical representation of distribution of taxa across two samples.
 }
 \examples{
 data_fungi_2Height <- subset_samples(data_fungi_mini, Height \%in\% c("Low", "High"))

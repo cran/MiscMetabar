@@ -2,13 +2,13 @@
 % Please edit documentation in R/miscellanous.R
 \name{as_binary_otu_table}
 \alias{as_binary_otu_table}
-\title{Transform the otu_table of a \code{\link{phyloseq-class}} object into a
-\code{\link{phyloseq-class}} object with a binary otu_table.}
+\title{Transform the otu_table of a \code{\link[phyloseq]{phyloseq-class}} object into a
+\code{\link[phyloseq]{phyloseq-class}} object with a binary otu_table.}
 \usage{
 as_binary_otu_table(physeq, min_number = 1)
 }
 \arguments{
-\item{physeq}{(required): a \code{\link{phyloseq-class}} object obtained
+\item{physeq}{(required): a \code{\link[phyloseq]{phyloseq-class}} object obtained
 using the \code{phyloseq} package.}
 
 \item{min_number}{(int) the minimum number of sequences to put
@@ -18,9 +18,12 @@ a 1 in the OTU table.}
 A \code{physeq} object with only 0/1 in the OTU table
 }
 \description{
-\ifelse{html}{\href{https://lifecycle.r-lib.org/articles/stages.html#maturing}{\figure{lifecycle-maturing.svg}{options: alt='[Maturing]'}}}{\strong{[Maturing]}}
-}
-\note{
+\if{html}{\out{
+<a href="https://adrientaudiere.github.io/MiscMetabar/articles/Rules.html#lifecycle">
+<img src="https://img.shields.io/badge/lifecycle-maturing-blue" alt="lifecycle-maturing"></a>
+}}
+
+
 Useful to test if the results are not biased by sequences bias
 that appended during PCR or NGS pipeline.
 }

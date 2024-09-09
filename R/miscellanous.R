@@ -1,11 +1,14 @@
 ################################################################################
-#' Transform the otu_table of a \code{\link{phyloseq-class}} object into a
-#'   \code{\link{phyloseq-class}} object with a binary otu_table.
-#' @note  Useful to test if the results are not biased by sequences bias
-#'   that appended during PCR or NGS pipeline.
+#' Transform the otu_table of a \code{\link[phyloseq]{phyloseq-class}} object into a
+#'   \code{\link[phyloseq]{phyloseq-class}} object with a binary otu_table.
 #'
 #' @description
-#' `r lifecycle::badge("maturing")`
+#'
+#' <a href="https://adrientaudiere.github.io/MiscMetabar/articles/Rules.html#lifecycle">
+#' <img src="https://img.shields.io/badge/lifecycle-maturing-blue" alt="lifecycle-maturing"></a>
+#'
+#' Useful to test if the results are not biased by sequences bias
+#'   that appended during PCR or NGS pipeline.
 #'
 #' @inheritParams clean_pq
 #' @param min_number (int) the minimum number of sequences to put
@@ -33,7 +36,11 @@ as_binary_otu_table <- function(physeq, min_number = 1) {
 #' Compute paired distances among matrix (e.g. otu_table)
 #'
 #' @description
-#' `r lifecycle::badge("experimental")`
+#'
+#' <a href="https://adrientaudiere.github.io/MiscMetabar/articles/Rules.html#lifecycle">
+#' <img src="https://img.shields.io/badge/lifecycle-experimental-orange" alt="lifecycle-experimental"></a>
+#'
+#' May be used to verify ecological distance among samples.
 #'
 #' @note the first column of the first matrix is compare to the first column of
 #'   the second matrix, the second column of the first matrix is compare to the
@@ -92,7 +99,9 @@ dist_bycol <- function(x,
 ################################################################################
 #' List the size of all objects of the GlobalEnv.
 #' @description
-#' `r lifecycle::badge("stable")`
+#'
+#' <a href="https://adrientaudiere.github.io/MiscMetabar/articles/Rules.html#lifecycle">
+#' <img src="https://img.shields.io/badge/lifecycle-stable-green" alt="lifecycle-stable"></a>
 #'
 #' Code from https://tolstoy.newcastle.edu.au/R/e6/help/09/01/1121.html
 #'
@@ -112,14 +121,17 @@ all_object_size <- function() {
 ################################################################################
 #' Simplify taxonomy by removing some unused characters such as "k__"
 #'
+#' @description
+#'
+#' <a href="https://adrientaudiere.github.io/MiscMetabar/articles/Rules.html#lifecycle">
+#' <img src="https://img.shields.io/badge/lifecycle-maturing-blue" alt="lifecycle-maturing"></a>
+#'
+#' Internally used in [clean_pq()]
 #' @inheritParams clean_pq
 #' @param remove_space (logical; default TRUE): do we remove space?
-#' @description
-#' `r lifecycle::badge("maturing")`
-#'
 #' @author Adrien Taudière
 #'
-#' @return A  \code{\link{phyloseq-class}} object with simplified taxonomy
+#' @return A  \code{\link[phyloseq]{phyloseq-class}} object with simplified taxonomy
 #' @export
 simplify_taxo <- function(physeq, remove_space = TRUE) {
   taxo <- physeq@tax_table
@@ -136,13 +148,15 @@ simplify_taxo <- function(physeq, remove_space = TRUE) {
 ################################################################################
 #' Get the extension of a file
 #'
-#' @param file_path (required): path to a file
 #' @description
-#' `r lifecycle::badge("maturing")`
+#' <a href="https://adrientaudiere.github.io/MiscMetabar/articles/Rules.html#lifecycle">
+#' <img src="https://img.shields.io/badge/lifecycle-maturing-blue" alt="lifecycle-maturing"></a>
 #'
+#' Internally used in [count_seq()].
+#' @param file_path (required): path to a file
 #' @author Adrien Taudière
 #'
-#' @return A  \code{\link{phyloseq-class}} object with simplified taxonomy
+#' @return The extension of a file.
 #' @export
 get_file_extension <- function(file_path) {
   file_ext <- strsplit(basename(file_path), ".", fixed = TRUE)[[1]][-1]
@@ -154,12 +168,17 @@ get_file_extension <- function(file_path) {
 ################################################################################
 #' Convert a value (or a fraction x/y) in percentage
 #'
+#' @description
+#'
+#' <a href="https://adrientaudiere.github.io/MiscMetabar/articles/Rules.html#lifecycle">
+#' <img src="https://img.shields.io/badge/lifecycle-maturing-blue" alt="lifecycle-maturing"></a>
+#'
+#' Mostly for internal use.
+#'
 #' @param x (required): value
 #' @param y if y is set, compute the division of x by y
 #' @param accuracy number of digits (number of digits after zero)
 #' @param add_symbol if set to TRUE add the % symbol to the value
-#' @description
-#' `r lifecycle::badge("maturing")`
 #'
 #' @author Adrien Taudière
 #'
@@ -185,8 +204,10 @@ perc <- function(x, y = NULL, accuracy = 0, add_symbol = FALSE) {
 #' Count sequences in fasta or fastq file
 #'
 #' @description
-#'  `r lifecycle::badge("experimental")`
-#'   Use grep to count the number of line with only one '+' (fastq, fastq.gz)
+#' <a href="https://adrientaudiere.github.io/MiscMetabar/articles/Rules.html#lifecycle">
+#' <img src="https://img.shields.io/badge/lifecycle-experimental-orange" alt="lifecycle-experimental"></a>
+#'
+#' Use grep to count the number of line with only one '+' (fastq, fastq.gz)
 #'   or lines starting with a '>' (fasta) to count sequences.
 #'
 #' @param file_path The path to a  fasta, fastq or fastq.gz file
@@ -332,7 +353,10 @@ transp <- function(col, alpha = 0.5) {
 #' Subsample a fastq file copying the n_seq first sequences in a given folder
 #'
 #' @description
-#'  `r lifecycle::badge("experimental")`
+#' <a href="https://adrientaudiere.github.io/MiscMetabar/articles/Rules.html#lifecycle">
+#' <img src="https://img.shields.io/badge/lifecycle-experimental-orange" alt="lifecycle-experimental"></a>
+#'
+#' Useful to test a pipeline on small fastq files.
 #'
 #' @param fastq_files The path to one fastq file or a list of fastq files
 #'   (see examples)
@@ -372,7 +396,8 @@ subsample_fastq <- function(fastq_files,
 #' Test if cutadapt is installed.
 #'
 #' @description
-#'  `r lifecycle::badge("maturing")`
+#' <a href="https://adrientaudiere.github.io/MiscMetabar/articles/Rules.html#lifecycle">
+#' <img src="https://img.shields.io/badge/lifecycle-maturing-blue" alt="lifecycle-maturing"></a>
 #'
 #' Useful for testthat and examples compilation for R CMD CHECK and
 #'   test coverage
@@ -397,7 +422,8 @@ is_cutadapt_installed <- function(args_before_cutadapt = "source ~/miniconda3/et
 #' Test if falco is installed.
 #'
 #' @description
-#'  `r lifecycle::badge("maturing")`
+#' <a href="https://adrientaudiere.github.io/MiscMetabar/articles/Rules.html#lifecycle">
+#' <img src="https://img.shields.io/badge/lifecycle-maturing-blue" alt="lifecycle-maturing"></a>
 #'
 #' Useful for testthat and examples compilation for R CMD CHECK and
 #'   test coverage
@@ -419,7 +445,8 @@ is_falco_installed <- function(path = "falco") {
 #' Test if swarm is installed.
 #'
 #' @description
-#'  `r lifecycle::badge("maturing")`
+#' <a href="https://adrientaudiere.github.io/MiscMetabar/articles/Rules.html#lifecycle">
+#' <img src="https://img.shields.io/badge/lifecycle-maturing-blue" alt="lifecycle-maturing"></a>
 #'
 #' Useful for testthat and examples compilation for R CMD CHECK and
 #'   test coverage
@@ -441,7 +468,8 @@ is_swarm_installed <- function(path = "swarm") {
 #' Test if vsearch is installed.
 #'
 #' @description
-#'  `r lifecycle::badge("maturing")`
+#' <a href="https://adrientaudiere.github.io/MiscMetabar/articles/Rules.html#lifecycle">
+#' <img src="https://img.shields.io/badge/lifecycle-maturing-blue" alt="lifecycle-maturing"></a>
 #'
 #' Useful for testthat and examples compilation for R CMD CHECK and
 #'   test coverage
@@ -463,7 +491,8 @@ is_vsearch_installed <- function(path = "vsearch") {
 #' Test if mumu is installed.
 #'
 #' @description
-#'  `r lifecycle::badge("maturing")`
+#' <a href="https://adrientaudiere.github.io/MiscMetabar/articles/Rules.html#lifecycle">
+#' <img src="https://img.shields.io/badge/lifecycle-maturing-blue" alt="lifecycle-maturing"></a>
 #'
 #' Useful for testthat and examples compilation for R CMD CHECK and
 #'   test coverage
@@ -486,7 +515,8 @@ is_mumu_installed <- function(path = "mumu") {
 #' Test if krona is installed.
 #'
 #' @description
-#'  `r lifecycle::badge("maturing")`
+#' <a href="https://adrientaudiere.github.io/MiscMetabar/articles/Rules.html#lifecycle">
+#' <img src="https://img.shields.io/badge/lifecycle-maturing-blue" alt="lifecycle-maturing"></a>
 #'
 #' Useful for testthat and examples compilation for R CMD CHECK and
 #'   test coverage

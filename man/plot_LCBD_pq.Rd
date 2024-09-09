@@ -14,7 +14,7 @@ plot_LCBD_pq(
 )
 }
 \arguments{
-\item{physeq}{(required): a \code{\link{phyloseq-class}} object obtained
+\item{physeq}{(required): a \code{\link[phyloseq]{phyloseq-class}} object obtained
 using the \code{phyloseq} package.}
 
 \item{p_adjust_method}{(chr, default "BH"): the method used to adjust p-value}
@@ -22,19 +22,23 @@ using the \code{phyloseq} package.}
 \item{pval}{(int, default 0.05): the value to determine the significance of
 LCBD}
 
-\item{sam_variables}{A vector of variables names present in the \code{sam_data}
+\item{sam_variables}{A vector of variable names present in the \code{sam_data}
 slot to plot alongside the LCBD value}
 
 \item{only_plot_significant}{(logical, default TRUE) Do we plot all LCBD
 values or only the significant ones}
 
-\item{...}{Others arguments passed on to \code{\link[adespatial:beta.div]{adespatial::beta.div()}} function}
+\item{...}{Other arguments passed on to \code{\link[adespatial:beta.div]{adespatial::beta.div()}} function}
 }
 \value{
 A ggplot2 object build with the package patchwork
 }
 \description{
-\ifelse{html}{\href{https://lifecycle.r-lib.org/articles/stages.html#experimental}{\figure{lifecycle-experimental.svg}{options: alt='[Experimental]'}}}{\strong{[Experimental]}}
+\if{html}{\out{
+<a href="https://adrientaudiere.github.io/MiscMetabar/articles/Rules.html#lifecycle">
+<img src="https://img.shields.io/badge/lifecycle-experimental-orange" alt="lifecycle-experimental"></a>
+}}
+
 
 A wrapper for the \code{\link[adespatial:beta.div]{adespatial::beta.div()}} function in the case of \code{physeq}
 object.

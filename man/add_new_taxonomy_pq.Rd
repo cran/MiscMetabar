@@ -7,7 +7,7 @@
 add_new_taxonomy_pq(physeq, ref_fasta, suffix = NULL, ...)
 }
 \arguments{
-\item{physeq}{(required): a \code{\link{phyloseq-class}} object obtained
+\item{physeq}{(required): a \code{\link[phyloseq]{phyloseq-class}} object obtained
 using the \code{phyloseq} package.}
 
 \item{ref_fasta}{(required) A link to a database.
@@ -17,13 +17,17 @@ Pass on to \code{dada2::assignTaxonomy}.}
 If set to NULL (the default), the basename of the file reFasta
 is used.}
 
-\item{...}{Others arguments pass on to \code{dada2::assignTaxonomy}.}
+\item{...}{Other arguments pass on to \code{dada2::assignTaxonomy}.}
 }
 \value{
-A new \code{\link{phyloseq-class}} object with a larger slot tax_table"
+A new \code{\link[phyloseq]{phyloseq-class}} object with a larger slot tax_table"
 }
 \description{
-\ifelse{html}{\href{https://lifecycle.r-lib.org/articles/stages.html#experimental}{\figure{lifecycle-experimental.svg}{options: alt='[Experimental]'}}}{\strong{[Experimental]}}
+\if{html}{\out{
+<a href="https://adrientaudiere.github.io/MiscMetabar/articles/Rules.html#lifecycle">
+<img src="https://img.shields.io/badge/lifecycle-experimental-orange" alt="lifecycle-experimental"></a>
+}}
+
 
 One of main use of this function is to add taxonomic assignment from
 a new database.

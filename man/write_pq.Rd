@@ -12,8 +12,8 @@ write_pq(
   write_sam_data = TRUE,
   sam_data_first = FALSE,
   clean_pq = TRUE,
-  reorder_asv = FALSE,
-  rename_asv = FALSE,
+  reorder_taxa = FALSE,
+  rename_taxa = FALSE,
   remove_empty_samples = TRUE,
   remove_empty_taxa = TRUE,
   clean_samples_names = TRUE,
@@ -25,7 +25,7 @@ write_pq(
 )
 }
 \arguments{
-\item{physeq}{(required): a \code{\link{phyloseq-class}} object obtained
+\item{physeq}{(required): a \code{\link[phyloseq]{phyloseq-class}} object obtained
 using the \code{phyloseq} package.}
 
 \item{path}{a path to the folder to save the phyloseq object}
@@ -42,13 +42,13 @@ Note that these option result in a lot of NA values.}
 Only used if \code{one_file} and write_sam_data are both TRUE.}
 
 \item{clean_pq}{(logical)
-If set to TRUE, empty samples are discarded after subsetting ASV}
+If set to TRUE, empty samples are discarded after subsetting taxa (ASV, OTU, ...)}
 
-\item{reorder_asv}{(logical) if TRUE the otu_table is ordered by the number of
-sequences of ASV (descending order). Default to TRUE. Only possible if clean_pq
+\item{reorder_taxa}{(logical) if TRUE the otu_table is ordered by the number of
+sequences of taxa (ASV, OTU, ...) (descending order). Default to TRUE. Only possible if clean_pq
 is set to TRUE.}
 
-\item{rename_asv}{reorder_asv (logical) if TRUE, ASV are renamed by their position
+\item{rename_taxa}{reorder_taxa (logical) if TRUE, taxa (ASV, OTU, ...) are renamed by their position
 in the OTU_table (asv_1, asv_2, ...). Default to FALSE. Only possible if clean_pq
 is set to TRUE.}
 
@@ -81,7 +81,13 @@ Build a folder (path) containing one to four csv tables
 and if present a phy_tree in Newick format
 }
 \description{
-\ifelse{html}{\href{https://lifecycle.r-lib.org/articles/stages.html#maturing}{\figure{lifecycle-maturing.svg}{options: alt='[Maturing]'}}}{\strong{[Maturing]}}
+\if{html}{\out{
+<a href="https://adrientaudiere.github.io/MiscMetabar/articles/Rules.html#lifecycle">
+<img src="https://img.shields.io/badge/lifecycle-maturing-blue" alt="lifecycle-maturing"></a>
+}}
+
+
+This is the reverse function of \code{\link[=read_pq]{read_pq()}}.
 }
 \examples{
 write_pq(data_fungi, path = paste0(tempdir(), "/phyloseq"))

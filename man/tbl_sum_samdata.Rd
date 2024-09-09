@@ -7,20 +7,24 @@
 tbl_sum_samdata(physeq, remove_col_unique_value = TRUE, ...)
 }
 \arguments{
-\item{physeq}{(required): a \code{\link{phyloseq-class}} object obtained
+\item{physeq}{(required): a \code{\link[phyloseq]{phyloseq-class}} object obtained
 using the \code{phyloseq} package.}
 
 \item{remove_col_unique_value}{(logical, default TRUE) Do we remove
 informative columns (categorical column with one value per samples),
 e.g. samples names ?}
 
-\item{...}{Others arguments pass on to \code{\link[gtsummary:tbl_summary]{gtsummary::tbl_summary()}}.}
+\item{...}{Other arguments pass on to \code{\link[gtsummary:tbl_summary]{gtsummary::tbl_summary()}}.}
 }
 \value{
-A new \code{\link{phyloseq-class}} object with a larger slot tax_table
+A new \code{\link[phyloseq]{phyloseq-class}} object with a larger slot tax_table
 }
 \description{
-\ifelse{html}{\href{https://lifecycle.r-lib.org/articles/stages.html#experimental}{\figure{lifecycle-experimental.svg}{options: alt='[Experimental]'}}}{\strong{[Experimental]}}
+\if{html}{\out{
+<a href="https://adrientaudiere.github.io/MiscMetabar/articles/Rules.html#lifecycle">
+<img src="https://img.shields.io/badge/lifecycle-experimental-orange" alt="lifecycle-experimental"></a>
+}}
+
 
 A wrapper for the \code{\link[gtsummary:tbl_summary]{gtsummary::tbl_summary()}} function in the case of \code{physeq}
 object.

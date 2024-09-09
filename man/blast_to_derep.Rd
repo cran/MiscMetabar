@@ -2,7 +2,7 @@
 % Please edit documentation in R/blast.R
 \name{blast_to_derep}
 \alias{blast_to_derep}
-\title{Blast some sequence against sequences from of a \code{\link{derep-class}}
+\title{Blast some sequence against sequences from of a \code{\link[dada2]{derep-class}}
 object.}
 \usage{
 blast_to_derep(
@@ -28,7 +28,7 @@ blast_to_derep(
 object.}
 
 \item{seq2search}{(required) path to a fasta file defining the sequences
-you want to blast against the ASV sequences from the physeq object.}
+you want to blast against the taxa (ASV, OTU) sequences from the physeq object.}
 
 \item{blastpath}{path to blast program}
 
@@ -81,7 +81,13 @@ files :
 A blast table
 }
 \description{
-\ifelse{html}{\href{https://lifecycle.r-lib.org/articles/stages.html#experimental}{\figure{lifecycle-experimental.svg}{options: alt='[Experimental]'}}}{\strong{[Experimental]}}
+\if{html}{\out{
+<a href="https://adrientaudiere.github.io/MiscMetabar/articles/Rules.html#lifecycle">
+<img src="https://img.shields.io/badge/lifecycle-experimental-orange" alt="lifecycle-experimental"></a>
+}}
+
+
+Use the blast software.
 }
 \seealso{
 \code{\link[=blast_pq]{blast_pq()}} to use \code{refseq} slot as query sequences

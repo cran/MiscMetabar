@@ -38,7 +38,11 @@ A new phyloseq-class, otu_table, tax_table, XStringset or
 sam_data object depending on the class of the x param
 }
 \description{
-\ifelse{html}{\href{https://lifecycle.r-lib.org/articles/stages.html#stable}{\figure{lifecycle-stable.svg}{options: alt='[Stable]'}}}{\strong{[Stable]}}
+\if{html}{\out{
+<a href="https://adrientaudiere.github.io/MiscMetabar/articles/Rules.html#lifecycle">
+<img src="https://img.shields.io/badge/lifecycle-stable-green" alt="lifecycle-stable"></a>
+}}
+
 
 Firstly release in the \href{https://github.com/mikemc/speedyseq/}{speedyseq} R
 package by Michael R. McLaren.
@@ -68,7 +72,7 @@ phyloseq behavior. If \code{tax_adjust == 2}, then these NAs are treated as a
 disagreement; all ranks are set to NA after the first disagreement or NA.
 }
 \seealso{
-Function in MiscMetabar that use this function: \code{\link[=asv2otu]{asv2otu()}}
+Function in MiscMetabar that use this function: \code{\link[=postcluster_pq]{postcluster_pq()}}
 
 \code{\link[base:rowsum]{base::rowsum()}}
 

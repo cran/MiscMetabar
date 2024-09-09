@@ -13,7 +13,7 @@ psmelt_samples_pq(
 )
 }
 \arguments{
-\item{physeq}{(required): a \code{\link{phyloseq-class}} object obtained
+\item{physeq}{(required): a \code{\link[phyloseq]{phyloseq-class}} object obtained
 using the \code{phyloseq} package.}
 
 \item{hill_scales}{(a vector of integer) The list of q values to compute
@@ -39,7 +39,11 @@ from \code{sam_data} slot as well as hill numbers, Abundance (nb of sequences),
 and Abundance_log10 (\emph{log10(1+Abundance)}).
 }
 \description{
-\ifelse{html}{\href{https://lifecycle.r-lib.org/articles/stages.html#experimental}{\figure{lifecycle-experimental.svg}{options: alt='[Experimental]'}}}{\strong{[Experimental]}}
+\if{html}{\out{
+<a href="https://adrientaudiere.github.io/MiscMetabar/articles/Rules.html#lifecycle">
+<img src="https://img.shields.io/badge/lifecycle-experimental-orange" alt="lifecycle-experimental"></a>
+}}
+
 
 Hill numbers are the number of equiprobable species giving the same diversity
 value as the observed distribution.

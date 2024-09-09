@@ -7,7 +7,7 @@
 multi_biplot_pq(physeq, split_by = NULL, pairs = NULL, na_remove = TRUE, ...)
 }
 \arguments{
-\item{physeq}{(required): a \code{\link{phyloseq-class}} object obtained
+\item{physeq}{(required): a \code{\link[phyloseq]{phyloseq-class}} object obtained
 using the \code{phyloseq} package.}
 
 \item{split_by}{(required if pairs is NULL) the name of the factor to make all combination
@@ -26,7 +26,11 @@ with NA in the \code{split_by} variable of the \code{physeq@sam_data} slot}
 a list of ggplot object
 }
 \description{
-\ifelse{html}{\href{https://lifecycle.r-lib.org/articles/stages.html#experimental}{\figure{lifecycle-experimental.svg}{options: alt='[Experimental]'}}}{\strong{[Experimental]}}
+\if{html}{\out{
+<a href="https://adrientaudiere.github.io/MiscMetabar/articles/Rules.html#lifecycle">
+<img src="https://img.shields.io/badge/lifecycle-experimental-orange" alt="lifecycle-experimental"></a>
+}}
+
 
 This allow to plot all the possible \code{\link[=biplot_pq]{biplot_pq()}} combination
 using one factor.

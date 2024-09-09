@@ -16,7 +16,7 @@ compare_pairs_pq(
 )
 }
 \arguments{
-\item{physeq}{(required): a \code{\link{phyloseq-class}} object obtained
+\item{physeq}{(required): a \code{\link[phyloseq]{phyloseq-class}} object obtained
 using the \code{phyloseq} package.}
 
 \item{bifactor}{(required) a factor (present in the \code{sam_data} slot of
@@ -45,7 +45,13 @@ A tibble with information about the number of shared ASV, shared number of seque
 and diversity
 }
 \description{
-\ifelse{html}{\href{https://lifecycle.r-lib.org/articles/stages.html#experimental}{\figure{lifecycle-experimental.svg}{options: alt='[Experimental]'}}}{\strong{[Experimental]}} #'   For the moment refseq slot need to be not Null.
+\if{html}{\out{
+<a href="https://adrientaudiere.github.io/MiscMetabar/articles/Rules.html#lifecycle">
+<img src="https://img.shields.io/badge/lifecycle-experimental-orange" alt="lifecycle-experimental"></a>
+}}
+
+
+For the moment refseq slot need to be not Null.
 }
 \examples{
 data_fungi_low_high <- subset_samples(data_fungi, Height \%in\% c("Low", "High"))

@@ -15,11 +15,16 @@ a \code{\link[tibble:tibble]{tibble::tibble}} containing the database, which can
 to the \code{db} argument of \code{\link[=funguild_assign]{funguild_assign()}}
 }
 \description{
-\ifelse{html}{\href{https://lifecycle.r-lib.org/articles/stages.html#stable}{\figure{lifecycle-stable.svg}{options: alt='[Stable]'}}}{\strong{[Stable]}}
+\if{html}{\out{
+<a href="https://adrientaudiere.github.io/MiscMetabar/articles/Rules.html#lifecycle">
+<img src="https://img.shields.io/badge/lifecycle-stable-green" alt="lifecycle-stable"></a>
+}}
+
+
 The original function and documentation was written by Brendan Furneaux
 in the \href{https://github.com/brendanf/FUNGuildR/}{FUNGuildR} package.
 
-Please cite this \href{https://www.sciencedirect.com/science/article/abs/pii/S1754504815000847}{publication}.
+Please cite this publication (\doi{10.1016/j.funeco.2015.06.006}).
 }
 \references{
 Nguyen NH, Song Z, Bates ST, Branco S, Tedersoo L, Menke J,

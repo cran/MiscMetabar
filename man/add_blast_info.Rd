@@ -7,7 +7,7 @@
 add_blast_info(physeq, fasta_for_db, silent = FALSE, ...)
 }
 \arguments{
-\item{physeq}{(required): a \code{\link{phyloseq-class}} object obtained
+\item{physeq}{(required): a \code{\link[phyloseq]{phyloseq-class}} object obtained
 using the \code{phyloseq} package.}
 
 \item{fasta_for_db}{path to a fasta file to make the blast database}
@@ -17,11 +17,15 @@ using the \code{phyloseq} package.}
 \item{...}{Other arguments passed on to \code{\link[=blast_pq]{blast_pq()}} function.}
 }
 \value{
-A new \code{\link{phyloseq-class}} object with more information in tax_table based on a
+A new \code{\link[phyloseq]{phyloseq-class}} object with more information in tax_table based on a
 blast on a given database
 }
 \description{
-\ifelse{html}{\href{https://lifecycle.r-lib.org/articles/stages.html#experimental}{\figure{lifecycle-experimental.svg}{options: alt='[Experimental]'}}}{\strong{[Experimental]}}
+\if{html}{\out{
+<a href="https://adrientaudiere.github.io/MiscMetabar/articles/Rules.html#lifecycle">
+<img src="https://img.shields.io/badge/lifecycle-experimental-orange" alt="lifecycle-experimental"></a>
+}}
+
 
 Basically a wrapper of \code{\link[=blast_pq]{blast_pq()}} with option \code{unique_per_seq = TRUE} and
 \code{score_filter = FALSE}.

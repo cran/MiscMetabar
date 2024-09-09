@@ -7,7 +7,7 @@
 reorder_taxa_pq(physeq, names_ordered, remove_phy_tree = FALSE)
 }
 \arguments{
-\item{physeq}{(required): a \code{\link{phyloseq-class}} object obtained
+\item{physeq}{(required): a \code{\link[phyloseq]{phyloseq-class}} object obtained
 using the \code{phyloseq} package.}
 
 \item{names_ordered}{(required): Names of the taxa (must be the same
@@ -20,7 +20,11 @@ tree is removed. It is}
 A phyloseq object
 }
 \description{
-\ifelse{html}{\href{https://lifecycle.r-lib.org/articles/stages.html#experimental}{\figure{lifecycle-experimental.svg}{options: alt='[Experimental]'}}}{\strong{[Experimental]}}
+\if{html}{\out{
+<a href="https://adrientaudiere.github.io/MiscMetabar/articles/Rules.html#lifecycle">
+<img src="https://img.shields.io/badge/lifecycle-experimental-orange" alt="lifecycle-experimental"></a>
+}}
+
 
 Note that the taxa order in a physeq object with a tree is locked by
 the order of leaf in the phylogenetic tree.

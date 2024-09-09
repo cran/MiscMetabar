@@ -19,7 +19,7 @@ glmutli_pq(
 )
 }
 \arguments{
-\item{physeq}{(required): a \code{\link{phyloseq-class}} object obtained
+\item{physeq}{(required): a \code{\link[phyloseq]{phyloseq-class}} object obtained
 using the \code{phyloseq} package.}
 
 \item{formula}{(required) a formula for \code{\link[glmulti:glmulti]{glmulti::glmulti()}}
@@ -55,7 +55,7 @@ is printed, including the number of candidate models.}
 
 \item{crit}{The Information Criterion to be used. Default is the small-sample corrected AIC (aicc). This should be a function that accepts a fitted model as first argument. Other provided functions are the classic AIC, the Bayes IC (bic), and QAIC/QAICc (qaic and qaicc).}
 
-\item{...}{Others arguments passed on to \code{\link[glmulti:glmulti]{glmulti::glmulti()}} function}
+\item{...}{Other arguments passed on to \code{\link[glmulti:glmulti]{glmulti::glmulti()}} function}
 }
 \value{
 A data.frame summarizing the glmulti results with columns
@@ -67,7 +67,13 @@ A data.frame summarizing the glmulti results with columns
 -alpha
 }
 \description{
-\ifelse{html}{\href{https://lifecycle.r-lib.org/articles/stages.html#experimental}{\figure{lifecycle-experimental.svg}{options: alt='[Experimental]'}}}{\strong{[Experimental]}}
+\if{html}{\out{
+<a href="https://adrientaudiere.github.io/MiscMetabar/articles/Rules.html#lifecycle">
+<img src="https://img.shields.io/badge/lifecycle-experimental-orange" alt="lifecycle-experimental"></a>
+}}
+
+
+See \code{\link[glmulti:glmulti]{glmulti::glmulti()}} for more information.
 }
 \details{
 This function is mainly a wrapper of the work of others.

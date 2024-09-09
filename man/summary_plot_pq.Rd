@@ -2,7 +2,7 @@
 % Please edit documentation in R/plot_functions.R
 \name{summary_plot_pq}
 \alias{summary_plot_pq}
-\title{Summarize a \code{\link{phyloseq-class}} object using a plot.}
+\title{Summarize a \code{\link[phyloseq]{phyloseq-class}} object using a plot.}
 \usage{
 summary_plot_pq(
   physeq,
@@ -12,7 +12,7 @@ summary_plot_pq(
 )
 }
 \arguments{
-\item{physeq}{(required): a \code{\link{phyloseq-class}} object obtained
+\item{physeq}{(required): a \code{\link[phyloseq]{phyloseq-class}} object obtained
 using the \code{phyloseq} package.}
 
 \item{add_info}{Does the bottom down corner contain
@@ -29,7 +29,13 @@ object is cleaned using the \code{\link[=clean_pq]{clean_pq()}} function?}
 A ggplot2 object
 }
 \description{
-\ifelse{html}{\href{https://lifecycle.r-lib.org/articles/stages.html#maturing}{\figure{lifecycle-maturing.svg}{options: alt='[Maturing]'}}}{\strong{[Maturing]}}
+\if{html}{\out{
+<a href="https://adrientaudiere.github.io/MiscMetabar/articles/Rules.html#lifecycle">
+<img src="https://img.shields.io/badge/lifecycle-maturing-blue" alt="lifecycle-maturing"></a>
+}}
+
+
+Graphical representation of a phyloseq object.
 }
 \examples{
 

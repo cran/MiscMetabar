@@ -17,7 +17,7 @@ adonis_pq(
 )
 }
 \arguments{
-\item{physeq}{(required): a \code{\link{phyloseq-class}} object obtained
+\item{physeq}{(required): a \code{\link[phyloseq]{phyloseq-class}} object obtained
 using the \code{phyloseq} package.}
 
 \item{formula}{(required) the right part of a formula for \code{\link[vegan:adonis]{vegan::adonis2()}}.
@@ -37,7 +37,7 @@ function. Need to be in \code{physeq@sam_data}}
 NA in the variables set in formula.}
 
 \item{correction_for_sample_size}{(logical, default FALSE) If set to TRUE,
-the sample size (number of sequences by samples) is add to formula in
+the sample size (number of sequences by samples) is added to formula in
 the form \code{y~Library_Size + Biological_Effect} following recommendation of
 \href{https://microbiomejournal.biomedcentral.com/articles/10.1186/s40168-017-0237-y}{Weiss et al. 2017}.
 \code{correction_for_sample_size} overcome \code{rarefy_nb_seqs} if both are TRUE.}
@@ -58,7 +58,11 @@ new column for partial R^2. See help of \code{\link[vegan:adonis]{vegan::adonis2
 more information.
 }
 \description{
-\ifelse{html}{\href{https://lifecycle.r-lib.org/articles/stages.html#experimental}{\figure{lifecycle-experimental.svg}{options: alt='[Experimental]'}}}{\strong{[Experimental]}}
+\if{html}{\out{
+<a href="https://adrientaudiere.github.io/MiscMetabar/articles/Rules.html#lifecycle">
+<img src="https://img.shields.io/badge/lifecycle-experimental-orange" alt="lifecycle-experimental"></a>
+}}
+
 
 A wrapper for the \code{\link[vegan:adonis]{vegan::adonis2()}} function in the case of \code{physeq} object.
 }

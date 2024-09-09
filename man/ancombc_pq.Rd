@@ -7,7 +7,7 @@
 ancombc_pq(physeq, fact, levels_fact = NULL, tax_level = "Class", ...)
 }
 \arguments{
-\item{physeq}{(required): a \code{\link{phyloseq-class}} object obtained
+\item{physeq}{(required): a \code{\link[phyloseq]{phyloseq-class}} object obtained
 using the \code{phyloseq} package.}
 
 \item{fact}{(required) Name of the factor in \code{physeq@sam_data} used to plot
@@ -25,7 +25,11 @@ en levels_fact)}
 The result of \code{\link[ANCOMBC:ancombc2]{ANCOMBC::ancombc2()}} function
 }
 \description{
-\ifelse{html}{\href{https://lifecycle.r-lib.org/articles/stages.html#experimental}{\figure{lifecycle-experimental.svg}{options: alt='[Experimental]'}}}{\strong{[Experimental]}}
+\if{html}{\out{
+<a href="https://adrientaudiere.github.io/MiscMetabar/articles/Rules.html#lifecycle">
+<img src="https://img.shields.io/badge/lifecycle-experimental-orange" alt="lifecycle-experimental"></a>
+}}
+
 
 A wrapper for the \code{\link[ANCOMBC:ancombc2]{ANCOMBC::ancombc2()}} function
 }

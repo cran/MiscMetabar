@@ -16,7 +16,7 @@ graph_test_pq(
 )
 }
 \arguments{
-\item{physeq}{(required): a \code{\link{phyloseq-class}} object obtained
+\item{physeq}{(required): a \code{\link[phyloseq]{phyloseq-class}} object obtained
 using the \code{phyloseq} package.}
 
 \item{fact}{(required) Name of the factor to cluster samples by modalities.
@@ -30,7 +30,7 @@ Need to be in \code{physeq@sam_data}}
 \item{nperm}{(int) The number of permutations to perform.}
 
 \item{return_plot}{(logical) Do we return only the result
-of the test or do we plot the result?}
+of the test, or do we plot the result?}
 
 \item{title}{The title of the Graph.}
 
@@ -41,11 +41,15 @@ NA in the variables set in formula.}
 \code{\link[phyloseqGraphTest:graph_perm_test]{phyloseqGraphTest::graph_perm_test()}} function}
 }
 \value{
-A \code{\link{ggplot}}2 plot with a subtitle indicating the pvalue
+A \code{\link[ggplot2]{ggplot}}2 plot with a subtitle indicating the pvalue
 and the number of permutations
 }
 \description{
-\ifelse{html}{\href{https://lifecycle.r-lib.org/articles/stages.html#maturing}{\figure{lifecycle-maturing.svg}{options: alt='[Maturing]'}}}{\strong{[Maturing]}}
+\if{html}{\out{
+<a href="https://adrientaudiere.github.io/MiscMetabar/articles/Rules.html#lifecycle">
+<img src="https://img.shields.io/badge/lifecycle-maturing-blue" alt="lifecycle-maturing"></a>
+}}
+
 
 A wrapper of \code{\link[phyloseqGraphTest:graph_perm_test]{phyloseqGraphTest::graph_perm_test()}} for quick plot with
 important statistics

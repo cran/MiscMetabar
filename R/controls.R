@@ -1,8 +1,13 @@
 ################################################################################
+#' Search for exact matching of sequences
+#'
+#' @description
+#'
+#' <a href="https://adrientaudiere.github.io/MiscMetabar/articles/Rules.html#lifecycle">
+#' <img src="https://img.shields.io/badge/lifecycle-experimental-orange" alt="lifecycle-experimental"></a>
+#'
 #' Search for exact matching of sequences using complement,
 #' reverse and reverse-complement
-#'
-#' `r lifecycle::badge("experimental")`
 #'
 #' @inheritParams clean_pq
 #' @param seq2search A DNAStringSet object of sequences to search for.
@@ -48,9 +53,10 @@ search_exact_seq_pq <- function(physeq, seq2search) {
 ################################################################################
 #' Calculate ecological distance among positive controls vs
 #'   distance for all samples
-
 #' @description
-#' `r lifecycle::badge("experimental")`
+#'
+#' <a href="https://adrientaudiere.github.io/MiscMetabar/articles/Rules.html#lifecycle">
+#' <img src="https://img.shields.io/badge/lifecycle-experimental-orange" alt="lifecycle-experimental"></a>
 #'
 #' Compute distance among positive controls,
 #'   i.e. samples which are duplicated
@@ -121,16 +127,23 @@ dist_pos_control <- function(physeq, samples_names, method = "bray") {
 
 
 ################################################################################
-#' Subset taxa using a taxa control (e.g. truffle root tips) through 3 methods.
+#' Subset taxa using a taxa control or distribution based method
 #'
-#' `r lifecycle::badge("experimental")`
+#' @description
+#' <a href="https://adrientaudiere.github.io/MiscMetabar/articles/Rules.html#lifecycle">
+#' <img src="https://img.shields.io/badge/lifecycle-experimental-orange" alt="lifecycle-experimental"></a>
+#'
+#' There is 3 main methods : discard taxa (i) using a control taxa (e.g. truffle root tips),
+#' (ii) using a mixture models to detect bimodality in pseudo-abundance distribution or
+#' (iii) using a minimum difference threshold pseudo-abundance. Each cutoff is defined at
+#' the sample level.
 #'
 #' @aliases subset_taxa_tax_control
 #' @inheritParams clean_pq
 #' @param taxa_distri (required) a vector of length equal to the number of
-#'   samples with the number of sequences per samples for the taxa control
+#'   samples with the number of sequences per sample for the taxa control
 #' @param method (default: "mean") a method to calculate the cut-off value.
-#'   There is 6 available methods:
+#'   There are 6 available methods:
 #'   1. `cutoff_seq`: discard taxa with less than the number of sequence
 #'           than taxa control,
 #'   2. `cutoff_mixt`: using mixture models,
@@ -141,11 +154,10 @@ dist_pos_control <- function(physeq, samples_names, method = "bray") {
 #'   6. `mean`: the mean of the three firsts methods
 #' @param min_diff_for_cutoff (int) argument for method `cutoff_diff`.
 #'   Required if method is `cutoff_diff`, `min`, `max` or `mean`
-#' @return A new \code{\link{phyloseq-class}} object.
+#' @return A new \code{\link[phyloseq]{phyloseq-class}} object.
 #' @export
 #'
 #' @examples
-#'
 #'
 #' subset_taxa_tax_control(data_fungi,
 #'   as.numeric(data_fungi@otu_table[, 300]),

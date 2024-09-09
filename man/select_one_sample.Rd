@@ -7,7 +7,7 @@
 select_one_sample(physeq, sam_name, silent = FALSE)
 }
 \arguments{
-\item{physeq}{(required): a \code{\link{phyloseq-class}} object obtained
+\item{physeq}{(required): a \code{\link[phyloseq]{phyloseq-class}} object obtained
 using the \code{phyloseq} package.}
 
 \item{sam_name}{(required) The sample name to select}
@@ -15,10 +15,14 @@ using the \code{phyloseq} package.}
 \item{silent}{(logical) If true, no message are printing.}
 }
 \value{
-A new \code{\link{phyloseq-class}} object with one sample
+A new \code{\link[phyloseq]{phyloseq-class}} object with one sample
 }
 \description{
-\ifelse{html}{\href{https://lifecycle.r-lib.org/articles/stages.html#experimental}{\figure{lifecycle-experimental.svg}{options: alt='[Experimental]'}}}{\strong{[Experimental]}}
+\if{html}{\out{
+<a href="https://adrientaudiere.github.io/MiscMetabar/articles/Rules.html#lifecycle">
+<img src="https://img.shields.io/badge/lifecycle-experimental-orange" alt="lifecycle-experimental"></a>
+}}
+
 
 Mostly for internal used, for example in function \code{\link[=track_wkflow_samples]{track_wkflow_samples()}}.
 }
