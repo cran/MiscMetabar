@@ -468,8 +468,9 @@ track_wkflow_samples <- function(list_pq_obj, ...) {
   if (sum(!unlist(lapply(list_pq_obj, inherits, "phyloseq"))) != 0) {
     stop("At least one object in your list_pq_obj is not a phyloseq obj.")
   }
-  res <- list()
   sam_names <- unique(unlist(lapply(list_pq_obj, sample_names)))
+  res <- vector("list", length(sam_names))
+  names(res) <- sam_names
   for (s in sam_names) {
     list_pq_obj_samples <-
       lapply(list_pq_obj, function(physeq) {
@@ -1021,7 +1022,6 @@ read_pq <- function(path = NULL,
     sample_names(physeq) <- unclass(physeq@sam_data[, sam_names])[[1]]
   }
 
-
   return(physeq)
 }
 
@@ -1060,6 +1060,7 @@ read_pq <- function(path = NULL,
 #' - "merged_ASV": the data.frame used to merged ASV
 #'
 #' @export
+#' @seealso [mumu_pq()]
 #' @examplesIf MiscMetabar::is_vsearch_installed()
 #' \donttest{
 #' lulu_pq(data_fungi_sp_known)
@@ -1208,6 +1209,7 @@ lulu_pq <- function(physeq,
 #'   bash to obtain details about columns' signification.
 #'
 #' @export
+#' @seealso [lulu_pq()]
 #' @examplesIf MiscMetabar::is_mumu_installed()
 #' \dontrun{
 #' mumu_pq(data_fungi_sp_known)
@@ -2019,6 +2021,7 @@ plot_guild_pq <-
 #' @examplesIf tolower(Sys.info()[["sysname"]]) != "windows"
 #' \donttest{
 #' if (requireNamespace("phangorn")) {
+#'   set.seed(22)
 #'   df <- subset_taxa_pq(data_fungi_mini, taxa_sums(data_fungi_mini) > 9000)
 #'   df_tree <- build_phytree_pq(df, nb_bootstrap = 2)
 #'   plot(df_tree$UPGMA)
