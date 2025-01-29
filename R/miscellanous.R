@@ -126,18 +126,49 @@ all_object_size <- function() {
 #'
 #' Internally used in [clean_pq()]
 #' @inheritParams clean_pq
+#' @param pattern_to_remove (a vector of character) the pattern to remove using [base::gsub()] function.
 #' @param remove_space (logical; default TRUE): do we remove space?
+#' @param remove_NA (logical; default FALSE): do we remove NA (in majuscule)?
 #' @author Adrien Taudière
 #'
 #' @return A  \code{\link[phyloseq]{phyloseq-class}} object with simplified taxonomy
 #' @export
-simplify_taxo <- function(physeq, remove_space = TRUE) {
+#' @examples
+#' d_fm <- data_fungi_mini
+#' d_fm@tax_table[, "Species"] <- paste0(rep(
+#'   c("s__", "s:"),
+#'   ntaxa(d_fm) / 2
+#' ), d_fm@tax_table[, "Species"])
+#'
+#' # First column is the new vector of Species,
+#' # second column is the column before simplification
+#' cbind(
+#'   simplify_taxo(d_fm)@tax_table[, "Species"],
+#'   d_fm@tax_table[, "Species"]
+#' )
+#' cbind(
+#'   simplify_taxo(d_fm, remove_NA = TRUE)@tax_table[, "Species"],
+#'   d_fm@tax_table[, "Species"]
+#' )
+simplify_taxo <- function(
+    physeq,
+    pattern_to_remove = c(".__", ".*:"),
+    remove_space = TRUE,
+    remove_NA = FALSE) {
   taxo <- physeq@tax_table
-  taxo <- gsub(".__", "", taxo, perl = TRUE)
+  for (p in pattern_to_remove) {
+    taxo <- gsub(p, "", taxo)
+  }
+
   if (remove_space) {
     taxo <- gsub(" ", "", taxo)
     taxo <- gsub("\u00a0", "", taxo)
   }
+
+  if (remove_NA) {
+    taxo <- gsub("NA", "", taxo, ignore.case = FALSE)
+  }
+
   physeq@tax_table <- tax_table(taxo)
   return(physeq)
 }
@@ -150,13 +181,20 @@ simplify_taxo <- function(physeq, remove_space = TRUE) {
 #' <a href="https://adrientaudiere.github.io/MiscMetabar/articles/Rules.html#lifecycle">
 #' <img src="https://img.shields.io/badge/lifecycle-maturing-blue" alt="lifecycle-maturing"></a>
 #'
-#' Internally used in [count_seq()].
+#'   Internally used in [count_seq()]. Warning: don't work when there is '.' in the name of the
+#'   file before the extension
 #' @param file_path (required): path to a file
 #' @author Adrien Taudière
 #'
 #' @return The extension of a file.
 #' @export
 get_file_extension <- function(file_path) {
+  if (stringr::str_count(file_path, "\\.") == 0) {
+    stop("There is no '.' inside your file path: ", file_path)
+  }
+  if (stringr::str_count(file_path, "\\.") > 1) {
+    message("There is more than one '.' inside your file path: ", file_path)
+  }
   file_ext <- strsplit(basename(file_path), ".", fixed = TRUE)[[1]][-1]
   return(file_ext)
 }
@@ -231,12 +269,18 @@ count_seq <- function(file_path = NULL, folder_path = NULL, pattern = NULL) {
   } else if (!is.null(file_path) && !is.null(folder_path)) {
     stop("You need to specify either file_path or folder_path param not both!")
   } else if (!is.null(file_path) && is.null(folder_path)) {
-    if (sum(get_file_extension(file_path) %in% "fasta") > 0) {
-      seq_nb <- system(paste0("cat ", file_path, " | grep -ce '^>'"),
-        intern = TRUE
-      )
-    } else if (sum(get_file_extension(file_path) %in% "fastq") > 0) {
-      if (sum(get_file_extension(file_path) %in% "gz") > 0) {
+    if (sum(get_file_extension(file_path) == "fasta") > 0) {
+      if (sum(get_file_extension(file_path) == "gz") > 0) {
+        seq_nb <- system(paste0("zcat ", file_path, " | grep -ce '^>'"),
+          intern = TRUE
+        )
+      } else {
+        seq_nb <- system(paste0("cat ", file_path, " | grep -ce '^>'"),
+          intern = TRUE
+        )
+      }
+    } else if (sum(get_file_extension(file_path) == "fastq") > 0) {
+      if (sum(get_file_extension(file_path) == "gz") > 0) {
         seq_nb <- system(paste0("zcat ", file_path, " | grep -ce '^+$'"),
           intern = TRUE
         )
@@ -371,7 +415,10 @@ transp <- function(col, alpha = 0.5) {
 #'   mustWork = TRUE
 #' )
 #' subsample_fastq(ex_file, paste0(tempdir(), "/output_fastq"))
-#' subsample_fastq(list_fastq_files("extdata"), paste0(tempdir(), "/output_fastq"), n = 10)
+#' subsample_fastq(list_fastq_files(system.file("extdata", package = "MiscMetabar")),
+#'   paste0(tempdir(), "/output_fastq"),
+#'   n = 10
+#' )
 #' unlink(paste0(tempdir(), "/output_fastq"), recursive = TRUE)
 #' }
 subsample_fastq <- function(fastq_files,
@@ -414,7 +461,7 @@ is_cutadapt_installed <- function(args_before_cutadapt = "source ~/miniconda3/et
   cutadapt_error_or_not <- try(system(paste0("bash ", tempdir(), "/script_cutadapt.sh 2>&1"), intern = TRUE), silent = T)
   unlink(paste0(tempdir(), "/script_cutadapt.sh"))
 
-  return(class(cutadapt_error_or_not) != "try-error")
+  return(!inherits(cutadapt_error_or_not, "try-error"))
 }
 
 #' Test if falco is installed.
@@ -435,9 +482,9 @@ is_cutadapt_installed <- function(args_before_cutadapt = "source ~/miniconda3/et
 #' @author Adrien Taudière
 
 is_falco_installed <- function(path = "falco") {
-  return(class(try(system(paste0(path, " 2>&1"), intern = TRUE),
+  return(!inherits(try(system(paste0(path, " 2>&1"), intern = TRUE),
     silent = TRUE
-  )) != "try-error")
+  ), "try-error"))
 }
 
 #' Test if swarm is installed.
@@ -458,9 +505,9 @@ is_falco_installed <- function(path = "falco") {
 #' @author Adrien Taudière
 
 is_swarm_installed <- function(path = "swarm") {
-  return(class(try(system(paste0(path, " -h 2>&1"), intern = TRUE),
+  return(!inherits(try(system(paste0(path, " -h 2>&1"), intern = TRUE),
     silent = TRUE
-  )) != "try-error")
+  ), "try-error"))
 }
 
 #' Test if vsearch is installed.
@@ -481,9 +528,9 @@ is_swarm_installed <- function(path = "swarm") {
 #' @author Adrien Taudière
 
 is_vsearch_installed <- function(path = "vsearch") {
-  return(class(try(system(paste0(path, " 2>&1"), intern = TRUE),
+  return(!inherits(try(system(paste0(path, " 2>&1"), intern = TRUE),
     silent = TRUE
-  )) != "try-error")
+  ), "try-error"))
 }
 
 #' Test if mumu is installed.
@@ -504,9 +551,9 @@ is_vsearch_installed <- function(path = "vsearch") {
 #' @author Adrien Taudière
 
 is_mumu_installed <- function(path = "mumu") {
-  return(class(try(system(paste0(path, " 2>&1"), intern = TRUE),
+  return(!inherits(try(system(paste0(path, " 2>&1"), intern = TRUE),
     silent = TRUE
-  )) != "try-error")
+  ), "try-error"))
 }
 
 
@@ -528,8 +575,8 @@ is_mumu_installed <- function(path = "mumu") {
 #' @author Adrien Taudière
 
 is_krona_installed <- function(path = "ktImportKrona") {
-  return(class(try(system(paste0(path, " 2>&1"), intern = TRUE),
+  return(inherits(try(system(paste0(path, " 2>&1"), intern = TRUE),
     silent = TRUE
-  )) != "try-error")
+  ), "try-error"))
 }
 ################################################################################

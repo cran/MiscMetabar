@@ -122,7 +122,7 @@ hill_tuckey_pq <- function(
 #' @param sample.size (int) A single integer value equal to the number of
 #'   reads being simulated, also known as the depth. See
 #'   [phyloseq::rarefy_even_depth()].
-#' @param verbose (logical). If TRUE, print additional informations.
+#' @param verbose (logical). If TRUE, print additional information.
 #' @param progress_bar (logical, default TRUE) Do we print progress during
 #'   the calculation?
 #' @param p_val_signif (float, `[0:1]`) The mimimum value of p-value to count a
@@ -302,7 +302,9 @@ hill_test_rarperm_pq <- function(physeq,
 #'   Package leaps must then be loaded, and this can only be applied to linear models
 #'   with covariates and no interactions. If "d", a simple summary of the candidate set
 #'   is printed, including the number of candidate models.
-#' @param crit The Information Criterion to be used. Default is the small-sample corrected AIC (aicc). This should be a function that accepts a fitted model as first argument. Other provided functions are the classic AIC, the Bayes IC (bic), and QAIC/QAICc (qaic and qaicc).
+#' @param crit The Information Criterion to be used. Default is the small-sample corrected AIC (aicc).
+#'   This should be a function that accepts a fitted model as first argument.
+#'   Other provided functions are the classic AIC, the Bayes IC (bic), and QAIC/QAICc (qaic and qaicc).
 #' @param ... Other arguments passed on to [glmulti::glmulti()] function
 #'
 #' @return A data.frame summarizing the glmulti results with columns
@@ -380,7 +382,7 @@ glmutli_pq <-
     if (fitfunction == "lm") {
       test <- vector("list", nrow(top_glmulti))
       R2__h0 <- NULL
-      for (i in 1:nrow(top_glmulti)) {
+      for (i in seq_along(nrow(top_glmulti))) {
         test[[i]] <- summary(res_glmulti@objects[[i]])
         R2__h0[i] <- test[[i]]$adj.r.squared
       }

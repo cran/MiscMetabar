@@ -4,20 +4,56 @@
 \alias{add_new_taxonomy_pq}
 \title{Add new taxonomic rank to a phyloseq object.}
 \usage{
-add_new_taxonomy_pq(physeq, ref_fasta, suffix = NULL, ...)
+add_new_taxonomy_pq(
+  physeq,
+  ref_fasta,
+  suffix = NULL,
+  method = c("dada2", "sintax", "lca", "idtaxa"),
+  trainingSet = NULL,
+  min_bootstrap = NULL,
+  ...
+)
 }
 \arguments{
 \item{physeq}{(required): a \code{\link[phyloseq]{phyloseq-class}} object obtained
 using the \code{phyloseq} package.}
 
 \item{ref_fasta}{(required) A link to a database.
-Pass on to \code{dada2::assignTaxonomy}.}
+passed on to \code{dada2::assignTaxonomy}.}
 
 \item{suffix}{(character) The suffix to name the new columns.
 If set to NULL (the default), the basename of the file reFasta
-is used.}
+is used with the name of the method. Set suffix to "" in order
+to remove any suffix.}
 
-\item{...}{Other arguments pass on to \code{dada2::assignTaxonomy}.}
+\item{method}{(required, default "dada2") :
+\itemize{
+\item "dada2": \code{\link[dada2:assignTaxonomy]{dada2::assignTaxonomy()}}
+\item "sintax": see \code{\link[=assign_sintax]{assign_sintax()}}
+\item "lca": see \code{\link[=assign_vsearch_lca]{assign_vsearch_lca()}}
+\item "idtaxa": see \code{\link[=assign_idtaxa]{assign_idtaxa()}}
+}}
+
+\item{trainingSet}{see \code{\link[=assign_idtaxa]{assign_idtaxa()}}. Only used if method = "idtaxa".
+Note that if trainingSet is not NULL, the ref_fasta is overwrite by the
+trainingSet parameter. To customize learning parameters of the idtaxa
+algorithm you must use trainingSet computed by the function \code{\link[=learn_idtaxa]{learn_idtaxa()}}.}
+
+\item{min_bootstrap}{(Int. [0:1])
+
+Minimum bootstrap value to inform taxonomy. For each bootstrap
+below the min_bootstrap value, the taxonomy information is set to NA.
+
+Correspond to parameters :
+\itemize{
+\item dada2: \code{minBoot}, default value = 0.5
+\item sintax: \code{min_bootstrap}, default value = 0.5
+\item lca: \code{id}, default value = 0.5. Note in that case, the bootstrap value is different.
+See the id parameter in \code{\link[=assign_vsearch_lca]{assign_vsearch_lca()}}
+\item idtaxa: \code{threshold}, default value = 0.6
+}}
+
+\item{...}{Other arguments passed on to the taxonomic assignation method.}
 }
 \value{
 A new \code{\link[phyloseq]{phyloseq-class}} object with a larger slot tax_table"
@@ -31,6 +67,9 @@ A new \code{\link[phyloseq]{phyloseq-class}} object with a larger slot tax_table
 
 One of main use of this function is to add taxonomic assignment from
 a new database.
+}
+\seealso{
+\code{\link[dada2:assignTaxonomy]{dada2::assignTaxonomy()}}, \code{\link[=assign_sintax]{assign_sintax()}}, \code{\link[=assign_vsearch_lca]{assign_vsearch_lca()}}, \code{\link[=assign_sintax]{assign_sintax()}}
 }
 \author{
 Adrien Taudière

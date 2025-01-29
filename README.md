@@ -14,6 +14,8 @@ v3](https://img.shields.io/badge/License-GPL%20v3-blue.svg)](https://www.gnu.org
 
 <!-- devtools::build_readme() -->
 
+<img src="https://repobeats.axiom.co/api/embed/82c4ce7bcc414cd0ddfeefecb32bc1fb0d51b45b.svg" title="Repobeats analytics image" alt="A panel showing some github statistics of the repositories using repobeats.axiom">
+
 # MiscMetabar <a href="https://adrientaudiere.github.io/MiscMetabar/"><img src="https://adrientaudiere.github.io/MiscMetabar/reference/figures/logo.png" align="right" height="138" alt="MiscMetabar website" /></a>
 
 See the pkgdown documentation site
@@ -123,7 +125,7 @@ data("data_fungi")
 summary_plot_pq(data_fungi)
 ```
 
-<img src="man/figures/README-example-1.png" width="100%" />
+<img src="man/figures/README-example-1.png" alt="Four rectangles represent the four component of an example phyloseq dataset. In each rectangle, some informations about the component are shown." width="100%" />
 
 ### Alpha-diversity analysis
 
@@ -142,18 +144,18 @@ p$plot_tuckey
 
 ``` r
 if (!require("ggVennDiagram", quietly = TRUE)) {
-  install.packages("ggVennDiagramà")
+  install.packages("ggVennDiagram")
 }
 ggvenn_pq(data_fungi, fact = "Height") +
   ggplot2::scale_fill_distiller(palette = "BuPu", direction = 1) +
   labs(title = "Share number of ASV among Height in tree")
 ```
 
-<img src="man/figures/README-unnamed-chunk-8-1.png" width="100%" />
+<img src="man/figures/README-unnamed-chunk-8-1.png" alt="A venn diagram showing the number of shared ASV and the percentage of shared ASV between the three modality of Height (low, middle and high)." width="100%" />
 
 ### Note for non-Linux users
 
-Some functions may not work on Windows (*e.g.* `track_wflow()`,
+Some functions may not work on Windows (*e.g.* `track_wkflow()`,
 `cutadapt_remove_primers()`, `krona()`, `vsearch_clustering()`, …). A
 solution is to exploit docker container, for example the using the great
 [rocker project](https://rocker-project.org/).

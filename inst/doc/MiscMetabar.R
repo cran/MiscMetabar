@@ -8,7 +8,6 @@ knitr::opts_chunk$set(
 ## ----example------------------------------------------------------------------
 library("MiscMetabar")
 library("phyloseq")
-library("magrittr")
 data("data_fungi")
 summary_plot_pq(data_fungi)
 

@@ -75,9 +75,7 @@ graph_test_pq <- function(physeq,
     nperm = nperm,
     ...
   )
-  if (!return_plot) {
-    return(res_graph_test)
-  } else {
+  if (return_plot) {
     p <- phyloseqGraphTest::plot_test_network(res_graph_test) +
       labs(
         title = title,
@@ -90,6 +88,8 @@ graph_test_pq <- function(physeq,
         )
       )
     return(p)
+  } else {
+    return(res_graph_test)
   }
 }
 ################################################################################
@@ -127,6 +127,12 @@ graph_test_pq <- function(physeq,
 #'   effect.
 #' @param verbose (logical, default TRUE) If TRUE, prompt some messages.
 #' @param ... Other arguments passed on to [vegan::adonis2()] function.
+#'   Note that the parameter `by` is important. If by is set to NULL
+#'   (default) the p-value is computed for the entire model.
+#' 	 by = NULL will assess the overall significance of all terms together,
+#'   by = "terms" will assess significance for each term (sequentially from first to last),
+#'   setting by = "margin" will assess the marginal effects of the terms (each marginal term analysed in a model with all other variables),
+#'   by = "onedf" will analyse one-degree-of-freedom contrasts sequentially. The argument is passed on to anova.cca.
 #' @return The function returns an anova.cca result object with a
 #'   new column for partial R^2. See help of [vegan::adonis2()] for
 #'   more information.
@@ -134,8 +140,12 @@ graph_test_pq <- function(physeq,
 #' data(enterotype)
 #' \donttest{
 #' adonis_pq(enterotype, "SeqTech*Enterotype", na_remove = TRUE)
-#' adonis_pq(enterotype, "SeqTech", dist_method = "jaccard")
-#' adonis_pq(enterotype, "SeqTech", dist_method = "robust.aitchison")
+#' adonis_pq(enterotype, "SeqTech*Enterotype", na_remove = TRUE, by = "terms")
+#' adonis_pq(enterotype, "SeqTech*Enterotype", na_remove = TRUE, by = "onedf")
+#' adonis_pq(enterotype, "SeqTech*Enterotype", na_remove = TRUE, by = "margin")
+#'
+#' adonis_pq(enterotype, "SeqTech", dist_method = "jaccard", by = "terms")
+#' adonis_pq(enterotype, "SeqTech", dist_method = "robust.aitchison", by = "terms")
 #' }
 #' @export
 #' @author Adrien Taudière
@@ -831,11 +841,8 @@ signif_ancombc <- function(ancombc_res,
   clnames <- colnames(signif_ancombc_res)
 
   name_modality <-
-    gsub(
-      "passed_ss", "",
-      clnames[grepl("passed_ss", clnames) &
-        !grepl("Intercept", clnames)]
-    )
+    gsub("passed_ss", "", clnames[grepl("passed_ss", clnames) &
+      !grepl("Intercept", clnames)])
 
   if (filter_passed) {
     signif_ancombc_res <- signif_ancombc_res %>%
@@ -1046,6 +1053,14 @@ plot_ancombc_pq <-
 #'   !is.na(data_fungi_mini@sam_data$Height)
 #' )
 #' taxa_only_in_one_level(data_fungi_mini_woNA4height, "Height", "High")
+#' #' # Taxa present only in low height samples
+#' suppressMessages(suppressWarnings(
+#'   taxa_only_in_one_level(data_fungi, "Height", "Low")
+#' ))
+#' # Number of taxa present only in sample of time equal to 15
+#' suppressMessages(suppressWarnings(
+#'   length(taxa_only_in_one_level(data_fungi, "Time", "15"))
+#' ))
 taxa_only_in_one_level <- function(physeq,
                                    modality,
                                    level,
@@ -1293,7 +1308,7 @@ var_par_pq <-
 #' @param sample.size (int) A single integer value equal to the number of
 #'   reads being simulated, also known as the depth. See
 #'   [phyloseq::rarefy_even_depth()].
-#' @param verbose (logical). If TRUE, print additional informations.
+#' @param verbose (logical). If TRUE, print additional information.
 #' @param progress_bar (logical, default TRUE) Do we print progress during
 #'   the calculation?
 #'
@@ -1354,13 +1369,6 @@ var_par_rarperm_pq <-
         width = 50,
         char = "="
       )
-    }
-
-    if (dist_method %in% c("robust.aitchison", "aitchison")) {
-      dist_physeq <-
-        vegdist(as(otu_table(physeq, taxa_are_rows = FALSE), "matrix"), method = dist_method)
-    } else {
-      dist_physeq <- phyloseq::distance(physeq, method = dist_method)
     }
 
     res_perm <- vector("list", nperm)

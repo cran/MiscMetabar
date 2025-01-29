@@ -19,8 +19,10 @@
 #' @export
 #'
 #' @examples
-#' list_fastq_files("extdata")
-#' list_fastq_files("extdata", paired_end = FALSE, pattern_R1 = "")
+#' list_fastq_files(system.file("extdata", package = "MiscMetabar"))
+#' list_fastq_files(system.file("extdata", package = "MiscMetabar"),
+#'   paired_end = FALSE, pattern_R1 = ""
+#' )
 #'
 #' @author Adrien Taudière
 
@@ -31,11 +33,23 @@ list_fastq_files <-
            pattern_R1 = "_R1_",
            pattern_R2 = "_R2_",
            nb_files = Inf) {
+    if (length(list.files(path)) == 0) {
+      stop("There is no files in the folder ", path)
+    }
     list_files <- list.files(path, pattern = pattern, full.names = TRUE)
+    if (length(list_files) == 0) {
+      stop("None file in the folder ", path, " match the pattern ", pattern)
+    }
     if (paired_end) {
       fnfs <- sort(list_files[grepl(list_files, pattern = pattern_R1)])
+      if (length(fnfs) == 0) {
+        stop("None file in the folder ", path, " match the pattern_R1 ", pattern_R1)
+      }
       fnrs <-
         sort(list_files[grepl(list_files, pattern = pattern_R2)])
+      if (length(fnrs) == 0) {
+        stop("None file in the folder ", path, " match the pattern_R2 ", pattern_R2)
+      }
       if (is.finite(nb_files)) {
         fnfs <- fnfs[seq(1, nb_files)]
         fnrs <- fnrs[seq(1, nb_files)]
@@ -156,8 +170,8 @@ rename_samples_otu_table <- function(physeq, names_of_samples) {
 filter_trim <-
   function(fw = NULL,
            rev = NULL,
-           output_fw = paste(getwd(), "/output/filterAndTrim_fwd", sep = ""),
-           output_rev = paste(getwd(), "/output/filterAndTrim_rev", sep = ""),
+           output_fw = file.path(paste(getwd(), "/output/filterAndTrim_fwd", sep = "")),
+           output_rev = file.path(paste(getwd(), "/output/filterAndTrim_rev", sep = "")),
            return_a_vector = FALSE,
            ...) {
     if (length(fw) == 1) {
@@ -199,10 +213,7 @@ filter_trim <-
       }
     } else {
       if (is.null(rev)) {
-        dada2::filterAndTrim(
-          filt = output_fw,
-          fwd = fw, ...
-        )
+        dada2::filterAndTrim(filt = output_fw, fwd = fw, ...)
         return(output_fw)
       } else {
         dada2::filterAndTrim(
@@ -300,7 +311,8 @@ sample_data_with_new_names <- function(file_path,
 rename_samples <- function(phyloseq_component,
                            names_of_samples,
                            taxa_are_rows = FALSE) {
-  if (is.null(sample_names(phyloseq_component)) && inherits(phyloseq_component, "matrix")) {
+  if (is.null(sample_names(phyloseq_component)) &&
+    inherits(phyloseq_component, "matrix")) {
     phyloseq_component <- otu_table(phyloseq_component, taxa_are_rows = taxa_are_rows)
   }
   if (length(names_of_samples) != length(sample_names(phyloseq_component))) {
@@ -310,5 +322,137 @@ rename_samples <- function(phyloseq_component,
   new_pq_component <- phyloseq_component
   sample_names(new_pq_component) <- names_of_samples
   return(new_pq_component)
+}
+################################################################################
+
+
+################################################################################
+#' Match sample names from sam_data and fastq files
+#'
+#' @description
+#'
+#' <a href="https://adrientaudiere.github.io/MiscMetabar/articles/Rules.html#lifecycle">
+#' <img src="https://img.shields.io/badge/lifecycle-experimental-orange" alt="lifecycle-experimental"></a>
+#'
+#' Useful for targets bioinformatic pipeline.
+#'
+#' @param path_sam_data (Required) Path to sample data file.
+#' @param sample_col_name (Required) The name of the column defining sample names in the sample data file.
+#' @param path_raw_seq (Required) Path to the folder containing fastq files
+#' @param pattern_remove_sam_data If not null, describe the pattern that will be deleted from
+#'   sam_data samples names.
+#' @param pattern_remove_fastq_files If not null, describe the pattern that will be deleted from
+#'   fastq files names.
+#' @param verbose (logical, default TRUE) If TRUE, print some additional messages.
+#' @param remove_undocumented_fastq_files (logical, default FALSE) If set to TRUE
+#'   fastq files not present in sam_data are removed from your folder.
+#'   Keep a copy of those files somewhere before.
+#' @param prefix Add a prefix to new samples names (ex. prefix = "samp")
+#' @param ... Other parameters passed on to [utils::read.csv()] function.
+#' @return A list of two objects :
+#'   - $sam_names_matching is a tibble of corresponding samples names
+#'   - $sam_data is a sample data files including only matching sample names
+#' @importFrom utils read.csv
+#' @export
+#' @author Adrien Taudière
+sam_data_matching_names <- function(path_sam_data,
+                                    sample_col_name,
+                                    path_raw_seq,
+                                    pattern_remove_sam_data = NULL,
+                                    pattern_remove_fastq_files = NULL,
+                                    verbose = TRUE,
+                                    remove_undocumented_fastq_files = FALSE,
+                                    prefix = NULL,
+                                    ...) {
+  sam_d <- read.csv(path_sam_data, ...)
+  names_sam_data <- sam_d[[sample_col_name]]
+  names_fastq_files_fullpath <- list.files(path_raw_seq)
+  names_fastq_files <- basename(names_fastq_files_fullpath)
+
+  if (!is.null(pattern_remove_sam_data)) {
+    names_sam_data_clean <- gsub(pattern_remove_sam_data, "", names_sam_data)
+    if (sum(duplicated(names_sam_data_clean)) > 0) {
+      stop(
+        "Their is duplicates in samples names from sam_data when removing pattern_remove_sam_data",
+        names_sam_data_clean[duplicated(names_sam_data_clean)]
+      )
+    }
+  } else {
+    names_sam_data_clean <- names_sam_data
+  }
+
+  if (!is.null(pattern_remove_fastq_files)) {
+    names_fastq_files_clean <- gsub(pattern_remove_fastq_files, "", names_fastq_files)
+  } else {
+    names_fastq_files_clean <- names_fastq_files
+  }
+
+  tib_sam_data <- tibble(
+    clean_sam = as.character(names_sam_data_clean),
+    raw_sam = as.character(names_sam_data)
+  )
+
+  tib_fastq <- tibble(
+    clean_fastq = as.character(names_fastq_files_clean),
+    raw_fastq = as.character(names_fastq_files),
+    raw_fastq_full_path = names_fastq_files_fullpath
+  )
+
+  tib_j <- full_join(tib_fastq, tib_sam_data, by = join_by(clean_fastq == clean_sam)) |>
+    rename(common_names = clean_fastq)
+
+  if (sum(is.na(tib_j$raw_fastq)) > 0) {
+    message(
+      sum(is.na(tib_j$raw_fastq)),
+      " samples in sam_data files are not present in fastq_files"
+    )
+    if (verbose) {
+      warning(
+        paste(tib_j$raw_sam[is.na(tib_j$raw_fastq)], collapse = " "),
+        " not matching names from sam_data file."
+      )
+    }
+  }
+
+  if (sum(is.na(tib_j$raw_sam)) > 0) {
+    message(
+      sum(is.na(tib_j$raw_sam)),
+      " samples in fastq files are not present in sam_data"
+    )
+    if (verbose) {
+      warning(
+        paste(tib_j$raw_fastq[is.na(tib_j$raw_sam)], collapse = " "),
+        " not matching names from fastq files."
+      )
+    }
+    if (remove_undocumented_fastq_files) {
+      if (verbose) {
+        warning(
+          "Files ",
+          tib_j$raw_fastq_full_path[is.na(tib_j$raw_sam)],
+          "will be removed from folder",
+          path_raw_seq
+        )
+      }
+      unlink(tib_j$raw_fastq_full_path[is.na(tib_j$raw_sam)])
+    }
+  }
+
+  if (!is.null(prefix)) {
+    tib_j$common_names <- paste0(prefix, tib_j$common_names)
+  }
+
+  if (is.null(pattern_remove_sam_data)) {
+    sam_d_new <- sam_d |>
+      dplyr::filter(.data[[sample_col_name]] %in% tib_j$raw_sam[!is.na(tib_j$raw_fastq)]) |>
+      dplyr::mutate("samples_names_common" = paste0(prefix, .data[[sample_col_name]])) |>
+      relocate(samples_names_common)
+  } else {
+    sam_d_new <- sam_d |>
+      dplyr::filter(.data[[sample_col_name]] %in% tib_j$raw_sam[!is.na(tib_j$raw_fastq)]) |>
+      dplyr::mutate("samples_names_common" = paste0(prefix, gsub(pattern_remove_sam_data, "", .data[[sample_col_name]]))) |>
+      relocate(samples_names_common)
+  }
+  return(list("sam_names_matching" = tib_j, "sam_data" = sam_d_new))
 }
 ################################################################################

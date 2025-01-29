@@ -10,6 +10,7 @@ track_wkflow(
   obj_names = NULL,
   clean_pq = FALSE,
   taxonomy_rank = NULL,
+  verbose = TRUE,
   ...
 )
 }
@@ -25,6 +26,8 @@ before clustering.}
 \item{taxonomy_rank}{A vector of int. Define the column number of
 taxonomic rank \verb{in physeq@tax_table} to compute the number of unique value.
 Default is NULL and do not compute values for any taxonomic rank}
+
+\item{verbose}{(logical) If true, print some additional messages.}
 
 \item{...}{Other arguments passed on to \code{\link[=clean_pq]{clean_pq()}} function.}
 }
@@ -53,9 +56,19 @@ clusters and samples
 data(enterotype)
 if (requireNamespace("pbapply")) {
   track_wkflow(list(data_fungi, enterotype), taxonomy_rank = c(3, 5))
+  track_wkflow(list(
+    "data FUNGI" = data_fungi,
+    "fastq files forward" =
+      unlist(list_fastq_files(system.file("extdata", package = "MiscMetabar"),
+        paired_end = FALSE
+      ))
+  ))
 }
 \dontshow{\}) # examplesIf}
 }
 \seealso{
 \code{\link[=track_wkflow_samples]{track_wkflow_samples()}}
+}
+\author{
+Adrien Taudière
 }

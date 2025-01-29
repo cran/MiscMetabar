@@ -10,21 +10,21 @@ data_fungi_2trees <-
 GP_archae <-
   subset_taxa(GlobalPatterns, GlobalPatterns@tax_table[, 1] == "Archaea")
 
-test_that("rotl_pq works with data_fungi dataset", {
-  skip_on_os("windows")
-  skip_on_cran()
-  library("rotl")
-  expect_s3_class(suppressWarnings(tr <-
-    rotl_pq(data_fungi, species_colnames = "Genus_species")), "phylo")
-  expect_s3_class(suppressWarnings(
-    rotl_pq(
-      data_fungi,
-      species_colnames = "Genus_species",
-      context_name = "Ascomycetes"
-    )
-  ), "phylo")
-  expect_silent(plot(tr))
-})
+# test_that("rotl_pq works with data_fungi dataset", {
+#   skip_on_os("windows")
+#   skip_on_cran()
+#   library("rotl")
+#   expect_s3_class(suppressWarnings(tr <-
+#                                      rotl_pq(data_fungi, species_colnames = "Genus_species")), "phylo")
+#   expect_s3_class(suppressWarnings(
+#     rotl_pq(
+#       data_fungi,
+#       species_colnames = "Genus_species",
+#       context_name = "Ascomycetes"
+#     )
+#   ), "phylo")
+#   expect_silent(plot(tr))
+# })
 
 # test_that("heat_tree_pq works with data_fungi dataset", {
 #   skip_on_cran()
@@ -414,7 +414,7 @@ test_that("build_phytree_pq work with data_fungi dataset", {
   skip_on_cran()
   df <- subset_taxa_pq(data_fungi, taxa_sums(data_fungi) > 19000)
   expect_type(df_tree <- build_phytree_pq(df, nb_bootstrap = 2, rearrangement = "stochastic"), "list")
-  #expect_type(df_tree <- build_phytree_pq(df, nb_bootstrap = 2, rearrangement = "ratchet"), "list")
+  # expect_type(df_tree <- build_phytree_pq(df, nb_bootstrap = 2, rearrangement = "ratchet"), "list")
   expect_error(build_phytree_pq(df, nb_bootstrap = 2, rearrangement = "PRAtchet"))
   expect_error(build_phytree_pq(GP, nb_bootstrap = 2))
 

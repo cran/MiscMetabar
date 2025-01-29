@@ -1,5 +1,56 @@
+# MiscMetabar 0.12.1 (in development) 
 
-# MiscMetabar 0.10.1 (in development)
+- Add parameter name `min_bootstrap` in [add_new_taxonomy_pq()]
+- Bug fix in [assign_idtaxa()]
+- Add parameters `pattern_to_remove` and `remove_NA` to [simplify_taxo()]
+
+# MiscMetabar 0.12.0 
+
+- Add function [assign_idtaxa()] and [learn_idtaxa()] to facilitate the taxonomic assignation using the idtaxa algorithm from the  DECIPHER R package.
+- Add option `idtaxa` to method in [add_new_taxonomy_pq()]
+- Add function [tbl_sum_taxtable()] to summarize tax_table from a phyloseq object 
+- In function [assign_sintax()], add params `too_few` (default value "align_start") and `too_many` (default "merge") to authorize db with variable numbers of rank and parenthesis in taxonomic name, 
+
+
+# MiscMetabar 0.11.1 
+
+- Add param `suffix` to `add_blast_info()` allowing multiple use of the function on the same phyloseq object (e.g. in order to used different database)
+- Add param `return_DNAStringSet` to `write_temp_fasta()` function to return a DNAStringSet object in place of a temporary file. 
+- Add a vignette pkgnet-report.
+- Add the possibility to send fasta.gz file to `count_seq()`
+
+# MiscMetabar 0.11 
+
+- Add function `filt_taxa_pq()` to filter taxa based on the number of sequences/occurences
+- Add functions `no_legend()` and `hill_curves_pq()` to plot hill diversity accumulation curves for phyloseq
+- Add function `umap_pq()` to compute Dimensionality Reduction with UMAP
+- Add function `plot_complexity_pq()` to plot kmer complexity of references sequences of a phyloseq object
+- Add param `type` to `ridge_pq()` to plot a cumulative version (type="ecdf") version of ridge
+- Introduce the idea of a pq-verse: some other packages will complete the MiscMetabar packages to make package maintenance easier. The [comparpq](https://github.com/adrientaudiere/comparpq) package will facilitate the comparison of phyloseq object with different taxonomy, different clustering methods, different samples with same modality or different primers. 
+- Add functions [assign_vsearch_lca()], [assign_sintax()] and internal function [write_temp_fasta()]
+- Add param `method` to `add_new_taxonomy_pq()` to allow the use of [dada2::assign_taxonomy()] (default, precedent only method available), [assign_sintax()] or [assign_vsearch_lca()] 
+
+
+# MiscMetabar 0.10.4
+
+- Add functions `plot_refseq_pq()` and `plot_refseq_extremity_pq()` to plot the proportion of each nucleotide and the diversity of nucleotides from `@refseq` of a phyloseq object.
+
+# MiscMetabar 0.10.3 
+
+- Add params `type`, `na_remove` and `verbose` to `ggvenn_pq()`. The type = "nb_seq" allow to plot Venn diagram with the number of shared sequences instead of shared ASV. 
+- Add automatic report in json for the function `cutadapt_remove_primers()`.
+- Add param `verbose` to `track_wkflow()` and improve examples for `track_wkflow()` and `list_fastq_files`
+
+# MiscMetabar 0.10.2
+
+- Improve code thanks to {lintr} package
+- Add option `return_file_path` to `cutadapt_remove_primers()` in order to facilitate targets pipeline
+- Add function `sam_data_matching_names()` to match and verify congruence between fastq files names and sample metadata (sam_data)
+
+
+# MiscMetabar 0.10.1
+
+> CRAN 2024-09-10
 
 - Delete function `heat_tree_pq()` because {metacoder} package is archived from CRAN.
 
@@ -7,7 +58,7 @@
 # MiscMetabar 0.9.4 
 
 - Set a seed in the example of `build_tree_pq` to resubmit to CRAN
-   Add a param `return_a_vector` in function `filter_trim()` to make possible to return a vector of path as it is usefull when used with `targets::tar_targets(..., format="file")`)
+   Add a param `return_a_vector` in function `filter_trim()` to make possible to return a vector of path as it is useful when used with `targets::tar_targets(..., format="file")`)
 - Make some storage amelioration by replacing `list()` by `vector(list, ...)` 
 
 # MiscMetabar 0.9.3
