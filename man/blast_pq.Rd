@@ -26,7 +26,8 @@ blast_pq(
 \item{physeq}{(required): a \code{\link[phyloseq]{phyloseq-class}} object obtained
 using the \code{phyloseq} package.}
 
-\item{fasta_for_db}{path to a fasta file to make the blast database}
+\item{fasta_for_db}{Either a DNAStringSet object or a path to a fasta
+file to make the blast database.}
 
 \item{database}{path to a blast database}
 
@@ -57,9 +58,9 @@ FALSE, \code{id_cut},\code{bit_score_cut}, \code{e_value_cut} and \code{min_cove
 Set to number of cpus/processors to use for blast (args -num_threads
 for blastn command)}
 
-\item{args_makedb}{Additional parameters parse to makeblastdb command}
+\item{args_makedb}{Additional arguments passed on to makeblastdb command}
 
-\item{args_blastn}{Additional parameters parse to blastn command}
+\item{args_blastn}{Additional arguments passed on to blastn command}
 
 \item{keep_temporary_files}{(logical, default: FALSE) Do we keep temporary files
 \itemize{
@@ -67,6 +68,7 @@ for blastn command)}
 \item dbase list of files (output of blastn)
 \item blast_result.txt the summary result of blastn using
 \verb{-outfmt "6 qseqid qlen sseqid slen length pident evalue bitscore qcovs"}
+\item temp.fasta if fasta_for_db was a DNAStringSet object.
 }}
 }
 \value{

@@ -6,14 +6,14 @@
 \usage{
 assign_sintax(
   physeq = NULL,
-  seq2search = NULL,
   ref_fasta = NULL,
+  seq2search = NULL,
   behavior = c("return_matrix", "add_to_phyloseq", "return_cmd"),
   vsearchpath = "vsearch",
   clean_pq = TRUE,
   nproc = 1,
   suffix = "",
-  taxo_rank = c("Kingdom", "Phylum", "Class", "Order", "Family", "Genus", "Species"),
+  taxa_ranks = c("Kingdom", "Phylum", "Class", "Order", "Family", "Genus", "Species"),
   min_bootstrap = 0.5,
   keep_temporary_files = FALSE,
   verbose = TRUE,
@@ -26,8 +26,6 @@ assign_sintax(
 \arguments{
 \item{physeq}{(required): a \code{\link[phyloseq]{phyloseq-class}} object obtained
 using the \code{phyloseq} package.}
-
-\item{seq2search}{A DNAStringSet object of sequences to search for.}
 
 \item{ref_fasta}{(required) A link to a database in vsearch format
 The reference database must contain taxonomic information in the header of
@@ -42,6 +40,9 @@ the name of the rank. Non-ascii characters should be avoided in the names.
 Example:
 
 \>X80725_S000004313;tax=d:Bacteria,p:Proteobacteria,c:Gammaproteobacteria,o:Enterobacteriales,f:Enterobacteriaceae,g:Escherichia/Shigella,s:Escherichia_coli,t:str._K-12_substr._MG1655}
+
+\item{seq2search}{A DNAStringSet object of sequences to search for. Replace
+the physeq object.}
 
 \item{behavior}{Either "return_matrix" (default), "return_cmd",
 or "add_to_phyloseq":
@@ -63,13 +64,13 @@ before clustering.}
 Set to number of cpus/processors to use}
 
 \item{suffix}{(character) The suffix to name the new columns.
-If set to "" (the default), the taxo_rank algorithm is used
+If set to "" (the default), the taxa_ranks algorithm is used
 without suffix.}
 
-\item{taxo_rank}{A list with the name of the taxonomic rank present in
+\item{taxa_ranks}{A list with the name of the taxonomic rank present in
 ref_fasta}
 
-\item{min_bootstrap}{(Int. [0:1], default 0.5)
+\item{min_bootstrap}{(Float [0:1], default 0.5)
 Minimum bootstrap value to inform taxonomy. For each bootstrap
 below the min_bootstrap value, the taxonomy information is set to NA.}
 
@@ -84,7 +85,7 @@ or seq2search
 
 \item{temporary_fasta_file}{The name of a temporary_fasta_file (default "temp.fasta")}
 
-\item{cmd_args}{Other arguments to be passed on to vsearch sintax cmd.
+\item{cmd_args}{Additional arguments passed on to vsearch sintax cmd.
 By default cmd_args is equal to "--sintax_random" as recommended by
 \href{https://github.com/torognes/vsearch/issues/535}{Torognes}.}
 

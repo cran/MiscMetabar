@@ -31,8 +31,8 @@
 #'   FALSE, `id_cut`,`bit_score_cut`, `e_value_cut` and `min_cover_cut` are ignored
 #' @param list_no_output_query (logical) does the result table include
 #'   query sequences for which `blastn` does not find any correspondence?
-#' @param args_makedb Additional parameters parse to makeblastdb command
-#' @param args_blastn Additional parameters parse to blastn command
+#' @param args_makedb Additional arguments passed on to makeblastdb command
+#' @param args_blastn Additional arguments passed on to blastn command
 #' @param nproc (default: 1)
 #'   Set to number of cpus/processors to use for blast (args -num_threads
 #'   for blastn command)
@@ -50,7 +50,6 @@
 #'
 #' @examples
 #' \dontrun{
-#'
 #' blastpath <- "...YOUR_PATH_TO_BLAST..."
 #' blast_to_phyloseq(data_fungi,
 #'   seq2search = system.file("extdata", "ex.fasta",
@@ -77,15 +76,17 @@ blast_to_phyloseq <- function(physeq,
   dna <- Biostrings::DNAStringSet(physeq@refseq)
   Biostrings::writeXStringSet(dna, paste0(tempdir(), "/", "db.fasta"))
 
-  system(paste0(
-    blastpath,
-    "makeblastdb -dbtype nucl -in ",
-    paste0(tempdir(), "/", "db.fasta"),
-    " -out ",
-    paste0(tempdir(), "/", "dbase"),
-    " ",
-    args_makedb
-  ))
+  system(
+    paste0(
+      blastpath,
+      "makeblastdb -dbtype nucl -in ",
+      paste0(tempdir(), "/", "db.fasta"),
+      " -out ",
+      paste0(tempdir(), "/", "dbase"),
+      " ",
+      args_makedb
+    )
+  )
 
   system(
     paste0(
@@ -98,7 +99,8 @@ blast_to_phyloseq <- function(physeq,
       paste0(tempdir(), "/", "blast_result.txt"),
       " -outfmt \"6 qseqid qlen sseqid slen",
       " length pident evalue bitscore qcovs\"",
-      " -num_threads ", nproc,
+      " -num_threads ",
+      nproc,
       " ",
       args_blastn
     )
@@ -173,9 +175,11 @@ blast_to_phyloseq <- function(physeq,
   }
 
   if (nrow(blast_tab) == 0) {
-    stop("No blast query match the score filters")
+    message("No blast query match the score filters")
+    return(NULL)
+  } else {
+    return(blast_tab)
   }
-  return(blast_tab)
 }
 ################################################################################
 
@@ -192,14 +196,15 @@ blast_to_phyloseq <- function(physeq,
 #' Use the blast software.
 #'
 #' @inheritParams blast_to_phyloseq
-#' @param fasta_for_db path to a fasta file to make the blast database
+#' @param fasta_for_db Either a DNAStringSet object or a path to a fasta
+#'  file to make the blast database.
 #' @param database path to a blast database
 #' @param keep_temporary_files (logical, default: FALSE) Do we keep temporary files
 #'   - db.fasta (refseq transformed into a database)
 #'   - dbase list of files (output of blastn)
 #'   - blast_result.txt the summary result of blastn using
 #'     `-outfmt "6 qseqid qlen sseqid slen length pident evalue bitscore qcovs"`
-#'
+#'   - temp.fasta if fasta_for_db was a DNAStringSet object.
 #' @seealso  [MiscMetabar::blast_to_phyloseq()] to use `refseq`
 #'   slot as a database
 #' @return  a blast table
@@ -221,28 +226,34 @@ blast_pq <- function(physeq,
                      keep_temporary_files = FALSE) {
   verify_pq(physeq)
   dna <- Biostrings::DNAStringSet(physeq@refseq)
-  Biostrings::writeXStringSet(
-    dna,
-    paste0(tempdir(), "/", "physeq_refseq.fasta")
-  )
+  Biostrings::writeXStringSet(dna, paste0(tempdir(), "/", "physeq_refseq.fasta"))
+
+  if (inherits(fasta_for_db, "DNAStringSet")) {
+    Biostrings::writeXStringSet(fasta_for_db, paste0(tempdir(), "/", "temp.fasta"))
+    fasta_for_db <- paste0(tempdir(), "/", "temp.fasta")
+  }
 
   if (is.null(fasta_for_db) && is.null(database)) {
-    stop("The function required a value for the parameters
-         `fasta_for_db` or `database` to run.")
+    stop(
+      "The function required a value for the parameters
+         `fasta_for_db` or `database` to run."
+    )
   } else if (!is.null(fasta_for_db) && !is.null(database)) {
     stop("You assign values for both `fasta_for_db` and
          `database` args. Please use only one.")
   } else if (!is.null(fasta_for_db) && is.null(database)) {
     message("Build the database from fasta_for_db")
-    system(paste0(
-      blastpath,
-      "makeblastdb -dbtype nucl -in ",
-      fasta_for_db,
-      " -out ",
-      paste0(tempdir(), "/", "dbase"),
-      " ",
-      args_makedb
-    ))
+    system(
+      paste0(
+        blastpath,
+        "makeblastdb -dbtype nucl -in ",
+        fasta_for_db,
+        " -out ",
+        paste0(tempdir(), "/", "dbase"),
+        " ",
+        args_makedb
+      )
+    )
     message("Blast refseq from physeq object against the database")
     system(
       paste0(
@@ -253,7 +264,8 @@ blast_pq <- function(physeq,
         paste0(tempdir(), "/", "dbase"),
         " -out ",
         paste0(tempdir(), "/", "blast_result.txt"),
-        " -num_threads ", nproc,
+        " -num_threads ",
+        nproc,
         " -outfmt \"6 qseqid qlen sseqid slen",
         " length pident evalue bitscore qcovs\"",
         " ",
@@ -273,7 +285,8 @@ blast_pq <- function(physeq,
         paste0(tempdir(), "/", "blast_result.txt"),
         " -outfmt \"6 qseqid qlen sseqid slen",
         " length pident evalue bitscore qcovs\"",
-        " -num_threads ", nproc,
+        " -num_threads ",
+        nproc,
         " ",
         args_blastn
       )
@@ -298,6 +311,7 @@ blast_pq <- function(physeq,
     unlink(paste0(tempdir(), "/", "blast_result.txt"))
     unlink(list.files(tempdir(), pattern = "dbase"))
     unlink(paste0(tempdir(), "/", "db.fasta"))
+    unlink(paste0(tempdir(), "/", "temp.fasta"))
   }
 
   if (!blast_tab_OK) {
@@ -333,9 +347,11 @@ blast_pq <- function(physeq,
   }
 
   if (nrow(blast_tab) == 0) {
-    stop("No blast query match the score filters")
+    message("No blast query match the score filters")
+    return(NULL)
+  } else {
+    return(blast_tab)
   }
-  return(blast_tab)
 }
 
 ################################################################################
@@ -367,8 +383,8 @@ blast_pq <- function(physeq,
 #'   that could be found just by chance.
 #' @param add_info_to_taxtable (logical, default TRUE) Does the blast information
 #'   are added to the taxtable ?
-#' @param ... Others options for the `blast_pq()` function. See `?blast_pq`.
-#'   Note that params `unique_per_seq` must be lft to TRUE and `score_filter`
+#' @param ... Additional arguments passed on to`blast_pq()` function. See `?blast_pq`.
+#'   Note that params `unique_per_seq` must be left to TRUE and `score_filter`
 #'   must be left to FALSE.
 #' @export
 #' @return A new \code{\link[phyloseq]{phyloseq-class}} object.
@@ -608,9 +624,11 @@ blast_to_derep <- function(derep,
   }
 
   if (nrow(blast_tab) == 0) {
-    stop("No blast query match the score filters")
+    message("No blast query match the score filters")
+    return(NULL)
+  } else {
+    return(blast_tab)
   }
-  return(blast_tab)
 }
 
 
@@ -632,7 +650,7 @@ blast_to_derep <- function(derep,
 #' @param silent (logical) If true, no message are printing.
 #' @param suffix (character) The suffix to name the new columns.
 #'   Set the suffix to "" in order to remove any suffix.
-#' @param ... Other arguments passed on to [blast_pq()] function.
+#' @param ... Additional arguments passed on to [blast_pq()] function.
 #' @return A new \code{\link[phyloseq]{phyloseq-class}} object with more information in tax_table based on a
 #'   blast on a given database
 #'
@@ -670,5 +688,297 @@ add_blast_info <- function(physeq, fasta_for_db, silent = FALSE, suffix = "blast
     ))
   }
   return(new_physeq)
+}
+################################################################################
+
+
+################################################################################
+#' Assign taxonomy using blastn algorithm and the blast software
+#'
+#' @description
+#'
+#' <a href="https://adrientaudiere.github.io/MiscMetabar/articles/Rules.html#lifecycle">
+#' <img src="https://img.shields.io/badge/lifecycle-experimental-orange" alt="lifecycle-experimental"></a>
+#'
+#' Use the blast software.
+#'
+#'
+#' @inheritParams clean_pq
+#' @param ref_fasta Either a DNAStringSet object or a path to a fasta
+#'  file to make the blast database. It must be in sintax format.
+#'  See [assign_sintax()].
+#' @param database path to a blast database. Only used if ref_fasta
+#'   is not set.
+#' @param blastpath path to blast program.
+#' @param behavior Either "return_matrix" (default), or "add_to_phyloseq":
+#'
+#'  - "return_matrix" return a list of two matrix with taxonomic value in the
+#'    first element of the list and bootstrap value in the second one.
+#'
+#'  - "add_to_phyloseq" return a phyloseq object with amended slot `@taxtable`.
+#'    Only available if using physeq input and not seq2search input.
+#'
+#' @param method (One of "vote" or "top-hit"). If top-hit, only the
+#'   better match is used to assign taxonomy. If vote, the algorithm
+#'   takes all (or `nb_voting` if `nb_voting` is not null) select assignation
+#'   and resolve the conflict using the function [resolve_vector_ranks()].
+#' @param suffix (character) The suffix to name the new columns.
+#'   If set to "" (the default), the taxa_ranks algorithm is used
+#'   without suffix.
+#' @param min_id (default: 95) the identity percent to take into account
+#'   a references taxa
+#' @param min_bit_score (default: 50) the minimum bit score to take
+#'   into account a references taxa
+#' @param min_cover (default: 50) cut of in query cover (%) to keep result
+#' @param min_e_value (default: 1e-30)  cut of in e-value (%) to keep result
+#'   The BLAST E-value is the number of expected hits of similar quality (score)
+#'   that could be found just by chance.
+#' @param nb_voting (Int, default NULL). The number of taxa to keep before apply
+#'   a vote to resolve conflict. If NULL all taxa passing the filters (min_id,
+#'   min_bit_score, min_cover and min_e_value) are selected.
+#' @param column_names A vector of names for taxonomic ranks. Must
+#'   correspond to names in the ref_fasta files.
+#' @param vote_algorithm the method to vote among "consensus", "rel_majority",
+#'  "abs_majority" and "unanimity". See [resolve_vector_ranks()] for more details.
+#' @param strict (Logical, default FALSE). See [resolve_vector_ranks()] for more details.
+#' @param nb_agree_threshold  See [resolve_vector_ranks()] for more details.
+#' @param preference_index  See [resolve_vector_ranks()] for more details.
+#' @param collapse_string  See [resolve_vector_ranks()] for more details.
+#' @param replace_collapsed_rank_by_NA (Logical, default TRUE) See [resolve_vector_ranks()] for more details.
+#' @param simplify_taxo (logical default TRUE). Do we apply the
+#'   function [simplify_taxo()] to the phyloseq object?
+#' @param keep_blast_metrics (Logical, default FALSE). If TRUE, the blast metrics
+#'   ("Query seq. length", "Taxa seq. length", "Alignment length",  "% id. match", "e-value",
+#'   "bit score" and "Query cover") are stored in the tax_table.
+#' @param ... Additional arguments passed on to [blast_pq()]
+#'
+#' @returns
+#' - If behavior == "return_matrix" :
+#'    - If method = "top-hit" a matrix of taxonomic assignation
+#'    - If method = "vote", a list of two matrix, the first is the
+#'      raw taxonomic assignation (before vote). The second one is
+#'      the taxonomic assignation in which conflicts are resolved
+#'      using vote.
+#'
+#' - If behavior == "add_to_phyloseq", return a new phyloseq object
+#' @export
+#' @author Adrien Taudière
+#' @examples
+#' \dontrun{
+#' ref_fasta <- Biostrings::readDNAStringSet(system.file("extdata",
+#'   "mini_UNITE_fungi.fasta.gz",
+#'   package = "MiscMetabar", mustWork = TRUE
+#' ))
+#'
+#' # assign_blastn(data_fungi_mini, ref_fasta = ref_fasta) # error because not
+#' # enough sequences in db so none blast query passed the filters.
+#' # So we used low score filter hereafter.
+#'
+#' mat <- assign_blastn(data_fungi_mini,
+#'   ref_fasta = ref_fasta,
+#'   method = "top-hit", min_id = 70, min_e_value = 1e-3, min_cover = 50,
+#'   min_bit_score = 20
+#' )
+#' head(mat)
+#'
+#' assign_blastn(data_fungi_mini,
+#'   ref_fasta = ref_fasta, method = "vote",
+#'   vote_algorithm = "rel_majority", min_id = 90, min_cover = 50,
+#'   behavior = "add_to_phyloseq"
+#' )@tax_table
+#'
+#' assign_blastn(data_fungi_mini,
+#'   ref_fasta = ref_fasta, method = "vote",
+#'   vote_algorithm = "consensus", replace_collapsed_rank_by_NA = FALSE,
+#'   min_id = 90, min_cover = 50, behavior = "add_to_phyloseq"
+#' )@tax_table
+#' }
+assign_blastn <- function(physeq,
+                          ref_fasta = NULL,
+                          database = NULL,
+                          blastpath = NULL,
+                          behavior = c("return_matrix", "add_to_phyloseq"),
+                          method = c("vote", "top-hit"),
+                          suffix = "_blastn",
+                          min_id = 95,
+                          min_bit_score = 50,
+                          min_cover = 95,
+                          min_e_value = 1e-30,
+                          nb_voting = NULL,
+                          column_names = c(
+                            "Kingdom",
+                            "Phylum",
+                            "Class",
+                            "Order",
+                            "Family",
+                            "Genus",
+                            "Species"
+                          ),
+                          vote_algorithm = c(
+                            "consensus",
+                            "rel_majority",
+                            "abs_majority",
+                            "unanimity"
+                          ),
+                          strict = FALSE,
+                          nb_agree_threshold = 1,
+                          preference_index = NULL,
+                          collapse_string = "/",
+                          replace_collapsed_rank_by_NA = TRUE,
+                          simplify_taxo = TRUE,
+                          keep_blast_metrics = FALSE,
+                          ...) {
+  behavior <- match.arg(method)
+  method <- match.arg(method)
+  vote_algorithm <- match.arg(vote_algorithm)
+  if (method == "vote") {
+    blast_tab_raw <- blast_pq(
+      physeq = physeq,
+      fasta_for_db = ref_fasta,
+      database = database,
+      unique_per_seq = FALSE,
+      id_cut = min_id,
+      bit_score_cut = min_bit_score,
+      min_cover_cut = min_cover,
+      e_value_cut = min_e_value,
+      ...
+    )
+
+    if (is.null(blast_tab_raw)) {
+      message("None blast query match the score filters")
+      if (behavior == "return_matrix") {
+        return(NULL)
+      } else {
+        return(physeq)
+      }
+    }
+
+    if (is.null(nb_voting)) {
+      nb_voting <- max(table(blast_tab_raw$`Query name`))
+    }
+
+    blast_tab <- blast_tab_raw |>
+      tidyr::separate(`Taxa name`,
+        into = c(paste0("Taxa_name_db", suffix), "Classification"),
+        sep = ";tax="
+      ) |>
+      tidyr::separate("Classification",
+        into = paste0(column_names, suffix),
+        sep = ","
+      ) |>
+      group_by(`Query name`) |>
+      slice_head(n = nb_voting) |>
+      summarise(
+        across(
+          c(
+            paste0(column_names, suffix),
+            paste0("Taxa_name_db", suffix)
+          ),
+          ~ resolve_vector_ranks(
+            .x,
+            method = vote_algorithm,
+            strict = strict,
+            nb_agree_threshold = nb_agree_threshold,
+            collapse_string = collapse_string,
+            replace_collapsed_rank_by_NA = replace_collapsed_rank_by_NA
+          )
+        ),
+        across(
+          c(
+            "Query seq. length",
+            "Taxa seq. length",
+            "Alignment length",
+            "% id. match",
+            "e-value",
+            "bit score",
+            "Query cover"
+          ),
+          list(mean = mean, sd = sd),
+          .names = paste0("{.fn}_", "{.col}", suffix)
+        )
+      ) |>
+      rename("taxa_names" = `Query name`)
+
+    if (!keep_blast_metrics) {
+      blast_tab <- blast_tab |>
+        select(c(
+          taxa_names,
+          paste0(column_names, suffix),
+          paste0("Taxa_name_db", suffix)
+        ))
+    }
+  } else if (method == "top-hit") {
+    blast_tab_raw <- blast_pq(
+      physeq = physeq,
+      fasta_for_db = ref_fasta,
+      database = database,
+      unique_per_seq = TRUE,
+      id_cut = min_id,
+      bit_score_cut = min_bit_score,
+      min_cover_cut = min_cover,
+      e_value_cut = min_e_value,
+      ...
+    )
+    if (is.null(blast_tab_raw)) {
+      message("None blast query match the score filters")
+      if (behavior == "return_matrix") {
+        return(NULL)
+      } else {
+        return(physeq)
+      }
+    }
+
+    blast_tab <- blast_tab_raw |>
+      tidyr::separate(`Taxa name`,
+        into = c(paste0("Taxa_name_db", suffix), "Classification"),
+        sep = ";tax="
+      ) |>
+      tidyr::separate("Classification",
+        into = paste0(column_names, suffix),
+        sep = ","
+      ) |>
+      rename("taxa_names" = `Query name`)
+
+    if (!keep_blast_metrics) {
+      blast_tab <- blast_tab |>
+        select(c(
+          taxa_names,
+          paste0(column_names, suffix),
+          paste0("Taxa_name_db", suffix)
+        ))
+    }
+  }
+  if (behavior == "return_matrix") {
+    if (method == "vote") {
+      return(list(
+        "raw_blast_table" = blast_tab_raw,
+        "blast_table_per_query" = blast_tab
+      ))
+    } else if (method == "top-hit") {
+      return("blast_table_per_query" = blast_tab)
+    }
+  } else if (behavior == "add_to_phyloseq") {
+    tax_tab <- as.data.frame(as.matrix(physeq@tax_table))
+    tax_tab$taxa_names <- taxa_names(physeq)
+
+    new_physeq <- physeq
+
+    new_tax_tab <- left_join(tax_tab, blast_tab, by = join_by(taxa_names)) |>
+      dplyr::select(-taxa_names) |>
+      as.matrix()
+
+    new_physeq@tax_table <- tax_table(new_tax_tab)
+    taxa_names(new_physeq@tax_table) <- taxa_names(physeq)
+
+    if (simplify_taxo) {
+      new_physeq <- simplify_taxo(new_physeq)
+    }
+
+    verify_pq(new_physeq)
+
+    return(new_physeq)
+  } else {
+    stop("Param behavior must take either 'return_matrix' or 'add_to_phyloseq' value")
+  }
 }
 ################################################################################
