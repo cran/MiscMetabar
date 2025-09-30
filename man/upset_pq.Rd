@@ -16,10 +16,10 @@ upset_pq(
 )
 }
 \arguments{
-\item{physeq}{(required): a \code{\link[phyloseq]{phyloseq-class}} object obtained
+\item{physeq}{(required) a \code{\link[phyloseq]{phyloseq-class}} object obtained
 using the \code{phyloseq} package.}
 
-\item{fact}{(required): Name of the factor to cluster samples by modalities.
+\item{fact}{(required) Name of the factor to cluster samples by modalities.
 Need to be in \code{physeq@sam_data}.}
 
 \item{taxa_fill}{(default NULL) fill the ASV upset using a column in
@@ -54,14 +54,14 @@ A \code{\link[ggplot2]{ggplot}}2 plot
 Alternative to venn plot.
 }
 \examples{
-if (requireNamespace("ComplexUpset")) {
+if (requireNamespace("ComplexUpset") && packageVersion("ggplot2") < "4.0.0") {
   upset_pq(data_fungi_mini,
     fact = "Height", width_ratio = 0.2,
     taxa_fill = "Class"
   )
 }
 \donttest{
-if (requireNamespace("ComplexUpset")) {
+if (requireNamespace("ComplexUpset") && packageVersion("ggplot2") < "4.0.0") {
   upset_pq(data_fungi_mini, fact = "Height", min_nb_seq = 1000)
   upset_pq(data_fungi_mini, fact = "Height", na_remove = FALSE)
 

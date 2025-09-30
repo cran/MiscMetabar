@@ -15,10 +15,10 @@ upset_test_pq(
 )
 }
 \arguments{
-\item{physeq}{(required): a \code{\link[phyloseq]{phyloseq-class}} object obtained
+\item{physeq}{(required) a \code{\link[phyloseq]{phyloseq-class}} object obtained
 using the \code{phyloseq} package.}
 
-\item{fact}{(required): Name of the factor to cluster samples by modalities.
+\item{fact}{(required) Name of the factor to cluster samples by modalities.
 Need to be in \code{physeq@sam_data}.}
 
 \item{var_to_test}{(default c("OTU")) : a vector of column present in
@@ -47,7 +47,8 @@ A \code{\link[ggplot2]{ggplot}}2 plot
 }}
 
 
-See \code{\link[=upset_pq]{upset_pq()}} to plot upset.
+See \code{\link[=upset_pq]{upset_pq()}} to plot upset. There is a bug with ggplot2 >= 4.0.0. See issue
+\url{https://github.com/krassowski/complex-upset/issues/213} for more details.
 }
 \examples{
 data(data_fungi)
