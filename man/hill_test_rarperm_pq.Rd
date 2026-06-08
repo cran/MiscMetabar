@@ -8,13 +8,13 @@ with different rarefaction even depth}
 hill_test_rarperm_pq(
   physeq,
   fact,
-  hill_scales = c(0, 1, 2),
+  q = c(0, 1, 2),
   nperm = 99,
   sample.size = min(sample_sums(physeq)),
   verbose = FALSE,
   progress_bar = TRUE,
   p_val_signif = 0.05,
-  type = "non-parametrique",
+  type = "nonparametric",
   ...
 )
 }
@@ -25,17 +25,18 @@ using the \code{phyloseq} package.}
 \item{fact}{(required) Name of the factor in \code{physeq@sam_data} used to plot
 different lines}
 
-\item{hill_scales}{(a vector of integer) The list of q values to compute
+\item{q}{(a vector of integer) The list of q values to compute
 the hill number H^q. If Null, no hill number are computed. Default value
 compute the Hill number 0 (Species richness), the Hill number 1
 (exponential of Shannon Index) and the Hill number 2 (inverse of Simpson
-Index).}
+Index). Hill numbers are more appropriate in DNA metabarcoding studies
+when \code{q > 0} (Alberdi & Gilbert, 2019; Calderón-Sanou et al., 2019).}
 
 \item{nperm}{(int) The number of permutations to perform.}
 
 \item{sample.size}{(int) A single integer value equal to the number of
 reads being simulated, also known as the depth. See
-\code{\link[phyloseq:rarefy_even_depth]{phyloseq::rarefy_even_depth()}}.}
+\code{\link[phyloseq:rarefy_even_depth]{phyloseq::rarefy_even_depth()}} and \code{\link[=rarefy_even_depth_pq]{rarefy_even_depth_pq()}}.}
 
 \item{verbose}{(logical). If TRUE, print additional information.}
 
@@ -77,20 +78,36 @@ A list of 6 components :
 This reduce the risk of a random drawing of a exceptional situation of an unique rarefaction.
 }
 \examples{
-\donttest{
+\dontrun{
 if (requireNamespace("ggstatsplot")) {
-  hill_test_rarperm_pq(data_fungi, "Time", nperm = 2)
-  res <- hill_test_rarperm_pq(data_fungi, "Height", nperm = 9, p.val = 0.9)
+  hill_test_rarperm_pq(data_fungi, "Time", nperm = 3)
+  res <- hill_test_rarperm_pq(data_fungi, "Height",
+    nperm = 3,
+    p_val_signif = 0.9
+  )
   patchwork::wrap_plots(res$plots[[1]])
   res$plots[[1]][[1]] + res$plots[[2]][[1]] + res$plots[[3]][[1]]
   res$prop_signif
-  res_para <- hill_test_rarperm_pq(data_fungi, "Height", nperm = 9, type = "parametrique")
+  res_para <- hill_test_rarperm_pq(data_fungi, "Height",
+    nperm = 3,
+    type = "parametric"
+  )
   res_para$plots[[1]][[1]] + res_para$plots[[2]][[1]] + res_para$plots[[3]][[1]]
   res_para$pvals
   res_para$method
   res_para$expressions[[1]]
 }
 }
+}
+\references{
+Alberdi, A., & Gilbert, M. T. P. (2019). A guide to the application of
+Hill numbers to DNA-based diversity analyses. \emph{Molecular Ecology Resources}.
+\doi{10.1111/1755-0998.13014}
+
+Calderón-Sanou, I., Münkemüller, T., Boyer, F., Zinger, L., & Thuiller, W.
+(2019). From environmental DNA sequences to ecological conclusions: How
+strong is the influence of methodological choices? \emph{Journal of Biogeography},
+47. \doi{10.1111/jbi.13681}
 }
 \seealso{
 \code{\link[ggstatsplot:ggbetweenstats]{ggstatsplot::ggbetweenstats()}}, \code{\link[=hill_pq]{hill_pq()}}

@@ -26,6 +26,14 @@
 #' @author Adrien Taudière
 
 search_exact_seq_pq <- function(physeq, seq2search) {
+  if (is.character(seq2search)) {
+    cli::cli_abort(
+      c(
+        "{.arg seq2search} must be a {.cls DNAStringSet}, not a character vector.",
+        "i" = "Wrap it: {.code Biostrings::DNAStringSet(seq2search)}"
+      )
+    )
+  }
   sequences <- seq2search
   res <- vector("list", length(sequences))
   for (i in seq_along(sequences)) {
@@ -48,7 +56,6 @@ search_exact_seq_pq <- function(physeq, seq2search) {
   }
   return(res)
 }
-
 
 
 ################################################################################
@@ -95,7 +102,7 @@ dist_pos_control <- function(physeq, samples_names, method = "bray") {
   dist_control <- vector()
 
   for (i in levels(as.factor(samples_names))) {
-    interm <- physeq@otu_table[samples_names == i, ]
+    interm <- as(physeq@otu_table[samples_names == i, ], "matrix")
     if (dim(interm)[1] > 1) {
       dist_control <-
         c(dist_control, as.numeric(vegan::vegdist(interm, method = method)))
@@ -107,16 +114,19 @@ dist_pos_control <- function(physeq, samples_names, method = "bray") {
 
   # Compute distance among all samples
   if (taxa_are_rows(physeq)) {
-    matdist_interm <- t(physeq@otu_table)
+    matdist_interm <- as(t(physeq@otu_table), "matrix")
   } else {
-    matdist_interm <- physeq@otu_table
+    matdist_interm <- as(physeq@otu_table, "matrix")
   }
 
   res[[1]] <-
-    data.frame("distAllSamples" = as.vector(vegan::vegdist(
-      matdist_interm,
-      diag = FALSE, upper = TRUE
-    )))
+    data.frame(
+      "distAllSamples" = as.vector(vegan::vegdist(
+        matdist_interm,
+        diag = FALSE,
+        upper = TRUE
+      ))
+    )
   res[[2]] <-
     data.frame("dist_control_samples" = as.vector(stats::na.omit(dist_control)))
   names(res) <- c("distAllSamples", "dist_controlontrolSamples")
@@ -124,8 +134,6 @@ dist_pos_control <- function(physeq, samples_names, method = "bray") {
   return(res)
 }
 ################################################################################
-
-
 
 ################################################################################
 #' Subset taxa using a taxa control or distribution based method
@@ -167,10 +175,7 @@ dist_pos_control <- function(physeq, samples_names, method = "bray") {
 #'
 #' @author Adrien Taudière
 subset_taxa_tax_control <-
-  function(physeq,
-           taxa_distri,
-           method = "mean",
-           min_diff_for_cutoff = NULL) {
+  function(physeq, taxa_distri, method = "mean", min_diff_for_cutoff = NULL) {
     verify_pq(physeq)
 
     cutoff_seq <- vector(mode = "numeric", length = nsamples(physeq))
@@ -182,9 +187,11 @@ subset_taxa_tax_control <-
 
     if (method %in% c("min", "max", "mean", "cutoff_diff")) {
       if (is.null(min_diff_for_cutoff)) {
-        stop("You need to set the `min_diff_for_cutoff` values
+        stop(
+          "You need to set the `min_diff_for_cutoff` values
           when using one of the following methods : min, max, mean and
-          cutoff_diff.")
+          cutoff_diff."
+        )
       }
     }
 
@@ -195,28 +202,33 @@ subset_taxa_tax_control <-
         find_cutoff <- function(proba = 0.5, il = index_lower) {
           ## Cutoff such that Pr[drawn from bad component] == proba
           f <- function(x) {
-            proba - (
-              model$lambda[il] * stats::dnorm(
-                x, model$mu[il],
-                model$sigma[il]
-              ) /
-                (
-                  model$lambda[1] * stats::dnorm(
-                    x, model$mu[1],
+            proba -
+              (model$lambda[il] *
+                stats::dnorm(
+                  x,
+                  model$mu[il],
+                  model$sigma[il]
+                ) /
+                (model$lambda[1] *
+                  stats::dnorm(
+                    x,
+                    model$mu[1],
                     model$sigma[1]
                   ) +
-                    model$lambda[2] * stats::dnorm(
-                      x, model$mu[2],
+                  model$lambda[2] *
+                    stats::dnorm(
+                      x,
+                      model$mu[2],
                       model$sigma[2]
-                    )
-                )
-            )
+                    )))
           }
-          return(stats::uniroot(
-            f = f,
-            lower = 1,
-            upper = 1000
-          )$root) # Careful with division by zero if changing lower and upper
+          return(
+            stats::uniroot(
+              f = f,
+              lower = 1,
+              upper = 1000
+            )$root
+          ) # Careful with division by zero if changing lower and upper
         }
 
         physeq_mixture <- as.vector(physeq@otu_table[i, ])
@@ -232,8 +244,11 @@ subset_taxa_tax_control <-
               ),
             silent = TRUE
           )
-          try(index_lower <-
-            which.min(model$mu), silent = TRUE)
+          try(
+            index_lower <-
+              which.min(model$mu),
+            silent = TRUE
+          )
           # Index of component with lower mean)
 
           cutoff_mixt[i] <-
@@ -268,19 +283,18 @@ subset_taxa_tax_control <-
       cutoffs <- cutoff_seq
     } else if (method == "mean") {
       cutoffs <-
-        apply(cbind(cutoff_mixt, cutoff_diff, cutoff_seq), 1, mean,
+        apply(
+          cbind(cutoff_mixt, cutoff_diff, cutoff_seq),
+          1,
+          mean,
           na.rm = TRUE
         )
     } else if (method == "min") {
       cutoffs <-
-        apply(cbind(cutoff_mixt, cutoff_diff, cutoff_seq), 1, min,
-          na.rm = TRUE
-        )
+        apply(cbind(cutoff_mixt, cutoff_diff, cutoff_seq), 1, min, na.rm = TRUE)
     } else if (method == "max") {
       cutoffs <-
-        apply(cbind(cutoff_mixt, cutoff_diff, cutoff_seq), 1, max,
-          na.rm = TRUE
-        )
+        apply(cbind(cutoff_mixt, cutoff_diff, cutoff_seq), 1, max, na.rm = TRUE)
     } else {
       stop("The method name is not valid.")
     }

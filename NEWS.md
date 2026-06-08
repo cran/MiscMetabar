@@ -1,35 +1,276 @@
-# MiscMetabar 0.14.4 (in development) 
+# MiscMetabar 0.16.8
+* `accu_plot()`, `dist_pos_control()`, `hill_curves_pq()` and `tsne_pq()` no longer error under recent R-devel: the `otu_table` is now coerced to a base matrix before being passed to `vegan` functions (`renyi()`, `renyiaccum()`, `specaccum()`, `vegdist()`), which previously triggered an `assignment of an object of class "numeric" is not valid for @'.Data'` error because plain `as.matrix()` does not strip the S4 `otu_table` class.
+* Rarefaction across the package is now performed by an internal R-version-robust reimplementation rather than `phyloseq::rarefy_even_depth()`, whose `replace = FALSE` code path errors with `invalid 'length.out' value` under recent R-devel (phyloseq issue #1753). The reimplementation is bit-identical to `phyloseq::rarefy_even_depth()` for the same `seed`, depth and `replace` value (and is more correct in the degenerate case where a retained sample has a single read). This affects `rarefy_pq()`, `adonis_pq()`, `adonis_rarperm_pq()`, `hill_test_rarperm_pq()`, `hill_pq()`, `biplot_pq()`, `ggvenn_pq()`, `upset_pq()`, `ggaluv_pq()` and `ggscatt_pq()`.
+* `rarefy_pq()` gains a `replace` argument (default `FALSE`, sampling without replacement) and accepts `seed = FALSE` to leave the random number generator untouched, mirroring `phyloseq::rarefy_even_depth()`.
+* Further check-time reductions for CRAN compliance:
+  extra examples `\dontrun{}` (kept for documentation,
+  not run during checks). 
+* Added file-level `skip_on_cran()` to some heavy test files.
+* Example speed-ups for some functions.
+* Fix several bugs when using Windows paths by quoting system call arguments with `shQuote()`
 
-- Add function [plot_seq_ratio_pq()] to explore the number of sequences per samples using difference ratio of the number of sequences per samples ordered by the number of sequences.
 
-- Fix a bug in [subset_taxa_pq()] when the condition was TRUE only for one taxon
+# MiscMetabar 0.16.6 
+* `verify_tax_table()` is now ~10× faster on full-size taxonomy tables.
+* `divent_hill_matrix_pq()` no longer recomputes the per-sample
+  positive-subset (`x <- x[x > 0]`) once per Hill order. The loop is
+  now sample-outer / q-inner, so each row is sliced once. Numeric
+  output is bitwise-identical. Speeds up every Hill-diversity
+  computation in the package: `hill_pq()`, `hill_bar_pq()`,
+  `hill_tuckey_pq()`, `profile_hill_pq()`, `psmelt_samples_pq()`,
+  `plot_refseq_extremity_pq()`, and the `*_rarperm_pq` family.
+* `circle_pq()` replaces a nested
+  `pbapply(., 2, pbtapply(., group, sum))` over the OTU table with
+  two `rowsum()` calls. On `data_fungi` (1420 taxa × 185 samples)
+  the example dropped from ~18 s to ~1.8 s (≈ 10× faster). Output
+  unchanged.
+* `format2dada2(fasta_db = …)`, `hill_acc_pq(type = "sample")`, `adonis_rarperm_pq()` are also faster.
+* New pkgdown article: `vignettes/articles/timing.Rmd` documents
+  wall-clock cost of the main functions on `data_fungi` and
+  `data_fungi_mini`, with a CSV refreshed by `inst/benchmark/function_timings.R`.
+* Pkgdown articles use fewer permutations / simulations to keep the site build under a few minutes.
+* Reduced `R CMD check` time to keep CRAN's 10-minute budget. Examples for
+  `verify_tax_table()`, `adonis_pq()`, `plot_SCBD_pq()`, `multipatt_pq()`,
+  `hill_pq()`, `plot_tsne_pq()`, `upset_test_pq()`, `summary_plot_pq()`,
+  `ggvenn_pq()`, `plot_refseq_pq()`, `plot_seq_ratio_pq()`,
+  `plot_refseq_extremity_pq()`, `glmutli_pq()`, `adonis_rarperm_pq()`,
+  `lefser_pq()`, `var_par_pq()`, `var_par_rarperm_pq()`,
+  `taxa_only_in_one_level()`, `distri_1_taxa()`, `accu_plot_balanced_modality()`,
+  `multi_biplot_pq()`, `tax_bar_pq()`, `plot_var_part_pq()`, `track_wkflow()`,
+  `reorder_taxa_pq()` and `transform_pq()` now use `data_fungi_mini`
+  (137 × 45) instead of the full `data_fungi` (185 × 1420), keeping behaviour
+  identical but much faster.
+* `hill_acc_pq()`, `iNEXT_pq()`, `format2dada2()` and `hill_test_rarperm_pq()`
+  examples moved from `\donttest{}` to `\dontrun{}`. These functions are
+  inherently CPU-bound (sample-based accumulation, fasta reformatting,
+  permutation × rarefaction × q-loop) and were the largest individual
+  contributors to the 10-min CRAN budget. Their behaviour is documented in
+  the corresponding vignettes.
+* `verify_pq()` example switched from `data_fungi` to `data_fungi_mini`
+  (82 s → < 5 s).
+* Tests: `plot_LCBD_pq()` / `LCBD_pq()` smoke tests in
+  `tests/testthat/test_figures_beta_div.R` lowered `nperm` from 100 to 9
+  (they only assert return class, not numeric stability).
+* Function defaults (`nperm`, `n_permutations`) are unchanged.
 
-- Fix warnings in [graph_test_pq()] with ggplot2 v.4.0.0
+# MiscMetabar 0.16.5 
+* `funguild_assign()` and `rotl_pq()` examples now use `\dontrun{}` instead of
+  `\donttest{}`. Both examples call external APIs (`www.stbates.org` and the
+  Open Tree of Life respectively) that are not always reachable during CRAN's
+  `--run-donttest` check, causing spurious ERRORs.
+* `verify_tax_table()`'s introductory example was moved inside the existing
+  `\donttest{}` block. The call against the full `data_fungi` dataset took
+  ~70 s, which triggered the CRAN "examples > 5 s" NOTE on every check.
+* `XVector` removed from `DESCRIPTION` `Imports`. It was declared but never
+  imported in `NAMESPACE` or used directly; `Biostrings` already loads it
+  transitively. CRAN flagged this as "Namespace in Imports field not imported
+  from".
+* Bibliography: corrected the DOI for Taberlet et al. (2012) "Environmental
+  DNA" in `paper/bibliography.bib`, `paper/paper.bib`, and the two
+  `vignettes/*.bib` files (was the journal ISSN landing
+  `10.1002/(issn)2637-4943`, now the paper DOI
+  `10.1111/j.1365-294X.2012.05542.x`). `README.md` and the pkgdown site
+  regenerate accordingly.
 
-- Fix a bug in [upseq_pq()] when using `min_nb_seq` parameter.
+# MiscMetabar 0.16.3
 
-- Add params `discard_genus_alone`, `pattern_to_remove_tip` and `pattern_to_remove_node` to [rotl_pq()] to enhance the default naming of 
-nodes and tips
+* `verify_tax_table()` now recognises **non-breaking space (U+00A0)** and other
+  Unicode separators (em space, ideographic space, ...) as border / internal
+  whitespace. Previously the detection regex `^\s|\s$` (TRE) and the stripping
+  call `trimws()` only handled ASCII `[ \t\r\n]`, so taxonomic values padded
+  with NBSP — common in spreadsheet- or copy-paste-derived metadata — were
+  silently kept as e.g. `"Archaeospora "`, causing duplicate genera and
+  broken grouping downstream. Detection now uses
+  `grepl("^[\\s\\p{Z}]|[\\s\\p{Z}]$", val, perl = TRUE)` and stripping uses
+  `gsub("^[\\s\\p{Z}]+|[\\s\\p{Z}]+$", "", val, perl = TRUE)`. Both
+  `clean_pq(..., tax_remove_border_spaces = TRUE)` and
+  `clean_pq(..., tax_remove_all_space = TRUE)` benefit from the fix.
+* `verify_tax_table()` gains a new check for **invisible / unusual characters**
+  in taxonomic values: anything in Unicode category `\p{C}` (control / format /
+  surrogate / private use / unassigned) or any `\p{Z}` separator other than
+  plain ASCII space or tab. Typical offenders are NBSP (U+00A0), zero-width
+  space (U+200B), zero-width joiner (U+200D) and C0 control characters.
+  Three new parameters drive the check: `detect_invisible_chars` (default
+  `TRUE`, warns when `verbose = TRUE`), `replace_invisible_chars` (default
+  `FALSE`, requires `modify_phyloseq = TRUE` to strip), and
+  `invisible_chars_replacement` (default `""`). Warnings/messages report each
+  offending value with the hexadecimal code points of the offending characters
+  so the user can see what is hiding inside the string.
+* `clean_pq()` gains `tax_replace_invisible_chars` (default `FALSE`) which
+  forwards to `verify_tax_table()` and strips invisible characters from the
+  cleaned `tax_table`.
+* CRAN resubmission. Fixes the incoming-checks failure reported for 0.16.2:
+  `write_pq()` no longer passes a `DNAStringSet` `refseq` slot directly to
+  `utils::write.table()` — sequences are now coerced via `as.character()`
+  first. This avoids dispatching to `as.data.frame,XStringSet-method` from
+  R-devel's `data.frame()`, which now forwards an internal `validRN = FALSE`
+  argument that the XStringSet method's `.local` does not accept.
+* `Biostrings` is now an `Imports` (moved from `Suggests`), so that the
+  `XVector` classes stored in `data/data_fungi*.rda` are covered by
+  `MiscMetabar`'s recursive strong dependency graph.
+* Replaced an unreachable `ggstatsplot` link in `NEWS.md`
+  (`www.indrapatil.com`) with the CRAN page.
+* `clean_pq()` gains four FALSE-by-default toggles to apply `verify_tax_table()` modifications on the cleaned `tax_table`: `remove_border_spaces` (trim leading/trailing whitespace), `remove_all_space` (replace internal whitespace via `replace_space_with`, default `"_"`), `replace_to_NA` (set values matching `unwanted_tax_patterns` to `NA`; accepts a custom pattern vector), and `redundant_suffix` (drop redundant `"_sp"` tips where the genus is already filled; accepts a custom suffix string such as `"_var"`). Toggles can be enabled independently or combined in a single call; each modification emits a message and nothing fires when all toggles are `FALSE`.
+
+# MiscMetabar 0.16.2
+
+# MiscMetabar 0.16.1 
+* `cutadapt_remove_primers()` gains a `cutadapt_args` parameter (default `""`) to pass additional arguments directly to cutadapt, such as `"-e 0.01"` to lower the maximum error rate from the cutadapt default of 10% to 1%.
+
+# MiscMetabar 0.15.2 
+* `hill_test_rarperm_pq()`: fixed default `type` from `"non-parametrique"` to `"nonparametric"` to match the documented valid values and avoid confusion.
+* `hill_test_rarperm_pq()`: fixed example that incorrectly passed `p.val = 0.9` (not a valid parameter); it now uses `p_val_signif = 0.9` as intended.
+* **ggstatsplot 1.0.0 compatibility notes**: ggstatsplot 1.0.0 removes `var.equal`, `nboot`, and `effsize.type` from `ggbetweenstats()`; if you were passing these through `...` to `ggbetween_pq()` or `hill_test_rarperm_pq()`, they will now be silently ignored. The `palette` argument now requires `"package::palette"` format (e.g. `palette = "ggthemes::gdoc"`), and the separate `package` argument has been removed from ggstatsplot.
+* `hill_bar_pq()` gains five parameters: `error_fun` (a function returning `c(lower, upper)` bounds, enabling asymmetric intervals such as quantile ranges; default mean ± SE), `error_fun_lab` (caption label; default `"mean ± SE"`), `error_bar_alpha` (transparency of the secondary top-half error bar drawn over jittered points; default `0.35`), `point_alpha` (transparency of jittered data points; default `0.7`), and `letters_below_bar` (when `TRUE`, compact letters are placed below the x-axis at a fixed position, giving a clean layout independent of data spread; default `FALSE`). Groups with `NA` values in the grouping variable now receive `"n.d."` letters when Tukey HSD is run, instead of being silently dropped.
+* `umap_pq()` no longer emits a tibble `.name_repair` deprecation warning when using `pkg = "umap"` (fixes #134).
+* `hill_bar_pq()` new function plotting Hill diversity bar charts (mean ±SE, jittered points, Kruskal-Wallis subtitle, optional Tukey HSD compact letter display) for one or multiple Hill orders via a patchwork layout.
+* `tax_bar_pq()` fixes a bug where `nb_seq = FALSE` with a grouping `fact` would sum binary per-sample presence values across samples sharing the same modality, inflating bar heights beyond the true OTU count. Each OTU is now counted at most once per group (present in ≥1 sample of that group), so bar segments correctly show the number of distinct OTUs in each taxonomic rank per modality.
+* `tax_bar_pq()` gains a `n_sample_text_size` parameter (default `2`) controlling the font size of the per-group sample count label. The `(n=X)` annotation is now displayed below each bar rather than appended to the group x-axis label.
+* New transformation/normalisation functions collected in `R/normalize_pq.R`, documented in a new article (`articles/normalization.html`).
+* `css_pq()` new function wrapping `metagenomeSeq::cumNorm()` for Cumulative Sum Scaling normalization.
+* `gmpr_pq()` new function implementing the Geometric Mean of Pairwise Ratios normalization (Chen et al. 2018) in pure R.
+* `mcknight_residuals_pq()` new function computing depth-robust alpha diversity as residuals of log-richness on log-depth (McKnight 2018; Mikryukov 2023).
+* `rarefy_pq()` new function wrapping `phyloseq::rarefy_even_depth()` with optional averaging over `n` rarefaction repetitions.
+* `srs_pq()` new function wrapping `SRS::SRS()` for Scaling with Ranked Subsampling normalization.
+* `tmm_pq()` new function wrapping `edgeR::calcNormFactors(method = "TMM")` for Trimmed Mean of M-values normalization.
+* `transform_pq()` new function providing a unified interface to common count transformations (`tss`, `hellinger`, `clr`, `rclr`, `log1p`, `z`, `pa`, `rank`) via `vegan::decostand()`.
+* `vst_pq()` new function wrapping `DESeq2::varianceStabilizingTransformation()`.
+* `biplot_pq()` gains a `color_rank` parameter (default `NULL`): when set to a taxonomic rank (e.g. `"Class"`), bars are colored by that rank instead of by sample modality, giving a taxonomic-composition view of the biplot. The fill legend is automatically titled with the rank name.
+* `biplot_pq()` gains a `taxa_names_rank` parameter (default `NULL`): when set to a taxonomic rank (e.g. `"Genus"`), the taxon axis labels display that rank instead of `taxa_names()`. Each OTU remains a separate bar regardless of shared rank values.
+* `biplot_pq()` no longer displays "Samples" on the taxon axis; the position used for the modality name annotations is now unlabeled.
+
+# MiscMetabar 0.15.1
+
+## New features
+
+* `unwanted_tax_patterns` is a new exported named character vector of regex patterns for common problematic taxonomy values (NA-like strings, `"unclassified"`, `"unknown"`, `"Incertae_sedis"`, empty QIIME-style ranks, etc.). `verify_tax_table()` now uses it as the default for `replace_to_NA`, and other pqverse packages (e.g. `dbpq::count_unwanted_tax()`) can reuse it to keep patterns in sync.
+
+## Breaking changes
+
+* `compare_pairs_pq()`, `ggbetween_pq()`, `hill_pq()`, `hill_tuckey_pq()`, `plot_refseq_extremity_pq()`, and `psmelt_samples_pq()` now use `divent::div_hill()` instead of `vegan::renyi()` for Hill number computation, and `compare_pairs_pq()` uses `divent::ent_shannon()` / `divent::ent_simpson()` instead of `vegan::diversity()` for Shannon and Simpson indices. The default estimator is now `"UnveilJ"` (bias-corrected) rather than the naive plug-in estimator — diversity values will differ from previous versions. Pass `estimator = "naive"` via `...` to restore old numeric behavior.
+
+## New features
+
+* `divent_hill_matrix_pq()` new exported utility to compute Hill numbers for all samples in an OTU table using `divent::div_hill()`. Accepts `...` to forward any argument to `divent::div_hill()`.
+* `ggbetween_pq()` gains a `q` parameter (default `c(0, 1, 2)`) to control which Hill diversity orders are computed. One plot is produced per value.
+* `hill_acc_pq()` gains a `type` parameter (`"individual"` or `"sample"`). `type = "sample"` computes sample-based accumulation curves by pooling samples incrementally across random permutations using `divent::div_hill()`, with a confidence ribbon. When `merge_sample_by` is set, one curve per group is drawn on the same plot. `type = "individual"` preserves the previous individual-based behaviour.
+* `profile_hill_pq()` new function wrapping `divent::profile_hill() |> autoplot()` to visualize Hill diversity profiles across all orders for all samples in a phyloseq object.
+
+## Deprecated
+
+* The `hill_scales` parameter in `hill_pq()`, `hill_tuckey_pq()`, and `psmelt_samples_pq()` is deprecated in favour of `q`. Use `q = c(0, 1, 2)` going forward.
+
+# MiscMetabar 0.14.6
+
+- Add `find_vsearch()` and `install_vsearch()` to make vsearch-based functions work on all platforms including Windows. `install_vsearch()` downloads the vsearch binary from GitHub, and `find_vsearch()` automatically locates it. All vsearch-calling functions now default to `find_vsearch()` instead of a hard-coded `"vsearch"` path. Users can also set `options(MiscMetabar.vsearchpath = "/path/to/vsearch")` for custom installations.
+
+- Add `ridges_sam_pq()`, the sample-centric counterpart of `ridges_pq()`: each ridge represents a taxon (at a given taxonomic level) and the x-axis shows the abundance distribution across samples, colored by a sample factor.
+
+- Add params `output_data_frame` to function `track_wkflow_samples()`
+
+- `cutadapt_remove_primers()` gains a `verbose` parameter (default `TRUE`). Set `verbose = FALSE` to fully silence cutadapt stdout/stderr and the completion message — unlike `suppressMessages()` or `capture.output()`, which cannot intercept system command output.
+
+- Fix a bug in `chimera_removal_vs()` where matrix dimensions were dropped when the input had only one sample (one row), causing downstream `[, ...]` indexing to fail with "incorrect number of dimensions". All three subsetting branches now use `drop = FALSE`.
+
+- Many functions accepting a `fact` parameter now handle single-level factors gracefully: functions that require multiple groups (`hill_pq()`, `hill_test_rarperm_pq()`, `graph_test_pq()`, `multipatt_pq()`, `ancombc_pq()`, `ggbetween_pq()`, `venn_pq()`, `ggvenn_pq()`, `upset_pq()`, `accu_plot()`, `accu_plot_balanced_modality()`, `plot_tsne_pq()`) now emit an informative error message, while functions that can produce meaningful output with a single level (`circle_pq()`, `sankey_pq()`, `are_modality_even_depth()`) no longer crash.
+
+- Fix a bug in `format2sintax()` where the `pattern_tax` parameter was referenced by the wrong internal name (`pattern_k`), causing an error when using the `taxnames` argument.
+
+- Add `reorder_distinct_colors()` to reassign fill and color scales in ggplot objects so that adjacent segments have maximally different colors, with optional colorblind optimization and lightness alternation.
+
+- `tax_bar_pq()` gains `show_values` and `minimum_value_to_show` parameters to display abundance values (or percentages when `percent_bar = TRUE`) inside bar segments.
+
+- `treemap_pq()` now uses `log10(x + 1)` instead of `log10(x)` so that taxa with a count of 1 are still visible. New parameters `show_na` (default `TRUE`) to display NA taxa as a grey area, `na_label` to customize the NA label, and `min_text_size` (default `0`) to control the minimum font size for tile labels.
+
+- `biplot_pq()` gains `split_by_sample`, `sample_border_col`, and `sample_border_width` parameters. When `split_by_sample = TRUE`, bars are stacked by sample with visible borders, showing the distribution of sequences across individual samples instead of a merged total.
+
+- Add two parameters to `tax_bar_pq()`, bar_internal_color to color each cells of the colored bars and linewidth_bar_internal to set the linewidth.
+
+- `tax_bar_pq()` with `label_taxa = TRUE` now also draws left-side labels for taxa that appear in the first bar but are absent from the last bar, making all taxa visible when using `add_ribbon = TRUE` across a time factor. A warning is emitted when taxa only appear in intermediate levels and cannot be labelled on either side.
+
+# MiscMetabar 0.14.5
+
+- Bug fix in `normalize_prop_pq` when taxa_are_rows(physeq) were FALSE.
+
+- Improve the `verify_pq()` function for cases where taxa_names or sample_names are not consistent and to test for duplicate sequences in @refseq slot.
+
+- Add a function `verify_tax_table()` to verify some classic issues in tax_table.
+
+- Fix a bug in `aldex_pq()` and `plot_ordination_pq()`. Also fix a bug in `plot_ordination_pq()` when using phyloseq object where taxa are rows.
+
+- Add parameters `show_count`, `facet_by`, `growing_text` and `text_size` to `treemap_pq()`: `show_count` appends raw abundance counts to labels, `facet_by` splits the treemap into facets by a sample metadata column, and `growing_text=FALSE` forces all tile labels to the same font size (determined by text_size).
+
+- Extend `track_wkflow_samples()` to accept all input types supported by `track_wkflow()`: matrix, dada-class, derep-class, lists of dada/derep, and character vectors of fastq file paths (previously only phyloseq objects were accepted).
+
+- Fix a bug for case with only one column in slot @sam_data
+
+- Fix a bug in the name of plot in the result of `hill_pq()` 
+
+- Fix a bug in `mumu_pq()` not deleting temporary file log.txt when `keep_temporary_files=FALSE`
+
+- Fix a bug in `adonis_pq()` when using na_remove = TRUE and multiple terms in formula.
+
+- Add parameter by to `adonis_pq()` to choose how to compute p-values (overall model, sequential terms, marginal effects, one-degree-of-freedom contrasts). The default is now by = "terms" that will assess significance for each term.
+
+- Add function `lefser_pq()` to run LEfSe analysis (differential analysis) from a phyloseq object using the package lefser.
+
+- Add function `aldex_pq()` to run ALDEX2 analysis (differential analysis) from a phyloseq object using the package ALDEx2 and the default parameters gamma=0.5.
+
+- Add the parameter `rngseed` in all functions which used `phyloseq::rarefy_even_depth` 
+  to set the seed for random number generator in order to increase reproducibility.
+  
+- Better messages (and not error) in `filter_asv_blast` when the resulting table of OTU is empty
+
+- Improve `ancombc_pq()` function by allowing custom names in the tax_levels parameter.
+
+- Fix a bug in `filt_taxa_pq` when using both min_nb_seq and min_nb_occurence parameters. 
+
+# MiscMetabar 0.14.4 
+
+## New features and improvements
+- Add function `plot_seq_ratio_pq()` to explore the number of sequences per samples using difference ratio of the number of sequences per samples ordered by the number of sequences.
+
+- Add params `discard_genus_alone`, `pattern_to_remove_tip` and `pattern_to_remove_node` to `rotl_pq()` to enhance the default naming of nodes and tips
 
 - Improve documentation consistency following the style guide
 
+- Allow `DNAStringSet` object as input of `swarm_clustering()` and `physeq_or_string_to_dna()`
+
+- Add param `rank_propagation` in `merge_taxa_vec()` to dissable the rank propagation of NA when merging taxa. It is useful when merging taxa with informations in the tax_table slot that do not follow a strict taxonomic hierarchical structure (e.g. functional guilds).
+
+- Add param `lulu_exact` in `mumu_pq()` to force the use of the unmodified lulu algorithm (with possibles errors) thanks to the option --legacy in mumu software. Add param `extra_mumu_args` to `mumu_pq()` to pass extra arguments to mumu software (`--minimum_match`, `--minimum_ratio_type`, `--minimum_ratio`, `--minimum_relative_cooccurence`, `--threads`). 
+
+- Add function `plot_ordination_pq` to plot ordination from vegan::vegdist object (useful when using aitchison and robust aitchison distances)
+
+## Bug fixes
+- Fix a bug in `subset_taxa_pq()` when the condition was TRUE only for one taxon
+
+- Fix warnings in `graph_test_pq()` with ggplot2 v.4.0.0
+
+- Fix a bug in `upseq_pq()` when using `min_nb_seq` parameter.
+
 - Fix a bug in blast function by allowing value to be equal (not strictly greater) to the threshold values `id_cut`, `bit_score_cut`, `min_cover_cut` and `e_value_cut`. 
+
+- Fix a bug in swarm associated functions (`swarm_clustering(), add_swarms_to_pq()`) to take into account the `d` parameter. Also add a parameter fastidious that is automatically set to FALSE is d is different from 1. 
+
+
 
 ## BREAKING CHANGE
 
-- Replace `species_colnames` by `taxonomic_ranks` in [rotl_pq()]
+- Replace `species_colnames` by `taxonomic_ranks` in `rotl_pq()`
 - Parameter name changes in `plot_mt()` and `krona()`
   - `plot_mt()`: `alpha` → `pval` (aligns with existing pval pattern in other functions)
   - `krona()`: `file` → `file_path` (aligns with existing file_path pattern)
 
+
 # MiscMetabar 0.14.3 
 
 
-- Better message in [subset_taxa_tax_control()]
-- Add parameters `text_size` and `text_size_info` to expand or minimize text annotation in [summary_plot_pq()]. 
-- Add function [filt_taxa_wo_NA()] to filter out taxa with NA values at given taxonomic rank(s)
-- Fix a bug in [format2dada2()] by adding semicolons to fill all the taxonomic levels if `from_sintax` is TRUE 
-- Fix a bug in [adonis_pq()] for method `aitchison` and `robust.aitchison`.
+- Better message in `subset_taxa_tax_control()`
+- Add parameters `text_size` and `text_size_info` to expand or minimize text annotation in `summary_plot_pq()`. 
+- Add function `filt_taxa_wo_NA()` to filter out taxa with NA values at given taxonomic rank(s)
+- Fix a bug in `format2dada2()` by adding semicolons to fill all the taxonomic levels if `from_sintax` is TRUE 
+- Fix a bug in `adonis_pq()` for method `aitchison` and `robust.aitchison`.
 
 # MiscMetabar 0.14.2 
 
@@ -37,32 +278,33 @@ nodes and tips
 
 # MiscMetabar 0.14.1 
 
-- Add the possibility to use to resolve conflict using [resolve_vector_ranks()] in the [assign_sintax()] function. Add numerous parameters to [assign_sintax()], in particular `vote_algorithm` to choose the algo resolving conflict.
-- Add param `pattern_to_remove` in [format2dada2()]
+- Add the possibility to use to resolve conflict using `resolve_vector_ranks()` in the `assign_sintax()` function.
+- Add numerous parameters to `assign_sintax()`, in particular `vote_algorithm` to choose the algo resolving conflict.
+- Add param `pattern_to_remove` in `format2dada2()`
 
 # MiscMetabar 0.14.0
 
-- Better filter of parameters in [add_new_taxonomy_pq()]. Only parameters used by the assign_* function corresponding to `method` are used.
-- Add functions [format2sintax()], [format2dada2()] and [format2dada2_species] to format fasta database in sintax, dada2 ([dada2::assignTaxonomy()]) and dada2 Species ([dada2::assignSpecies()]) format
-- Add function [assign_dada2()] to assign Taxonomy (with missing ranks if needed) and to assign species using [dada2::assignSpecies()] with only one database input. Add method `dada2_2steps` in function [add_new_taxonomy_pq()] which use [assign_dada2()] function.
+- Better filter of parameters in `add_new_taxonomy_pq()`. Only parameters used by the assign_* function corresponding to `method` are used.
+- Add functions `format2sintax()`, `format2dada2()` and `format2dada2_species` to format fasta database in sintax, dada2 (`dada2::assignTaxonomy()`) and dada2 Species (`dada2::assignSpecies()`) format
+- Add function `assign_dada2()` to assign Taxonomy (with missing ranks if needed) and to assign species using `dada2::assignSpecies()` with only one database input. Add method `dada2_2steps` in function `add_new_taxonomy_pq()` which use `assign_dada2()` function.
 
 # MiscMetabar 0.13.0
 
-- Add function [assign_blastn()] and add a method `blast` in the function [add_new_taxonomy_pq()].
-- Add function [resolve_vector_ranks()] to resolve conflict in a vector of taxonomy values
+- Add function `assign_blastn()` and add a method `blast` in the function `add_new_taxonomy_pq()`.
+- Add function `resolve_vector_ranks()` to resolve conflict in a vector of taxonomy values
 
 # MiscMetabar 0.12.1
 
-- Add parameter name `min_bootstrap` in [add_new_taxonomy_pq()]
-- Bug fix in [assign_idtaxa()]
-- Add parameters `pattern_to_remove` and `remove_NA` to [simplify_taxo()]
+- Add parameter name `min_bootstrap` in `add_new_taxonomy_pq()`
+- Bug fix in `assign_idtaxa()`
+- Add parameters `pattern_to_remove` and `remove_NA` to `simplify_taxo()`
 
 # MiscMetabar 0.12.0 
 
-- Add function [assign_idtaxa()] and [learn_idtaxa()] to facilitate the taxonomic assignation using the idtaxa algorithm from the  DECIPHER R package.
-- Add option `idtaxa` to method in [add_new_taxonomy_pq()]
-- Add function [tbl_sum_taxtable()] to summarize tax_table from a phyloseq object 
-- In function [assign_sintax()], add params `too_few` (default value "align_start") and `too_many` (default "merge") to authorize db with variable numbers of rank and parenthesis in taxonomic name, 
+- Add function `assign_idtaxa()` and `learn_idtaxa()` to facilitate the taxonomic assignation using the idtaxa algorithm from the  DECIPHER R package.
+- Add option `idtaxa` to method in `add_new_taxonomy_pq()`
+- Add function `tbl_sum_taxtable()` to summarize tax_table from a phyloseq object 
+- In function `assign_sintax()`, add params `too_few` (default value "align_start") and `too_many` (default "merge") to authorize db with variable numbers of rank and parenthesis in taxonomic name, 
 
 
 # MiscMetabar 0.11.1 
@@ -79,9 +321,9 @@ nodes and tips
 - Add function `umap_pq()` to compute Dimensionality Reduction with UMAP
 - Add function `plot_complexity_pq()` to plot kmer complexity of references sequences of a phyloseq object
 - Add param `type` to `ridge_pq()` to plot a cumulative version (type="ecdf") version of ridge
-- Introduce the idea of a pq-verse: some other packages will complete the MiscMetabar packages to make package maintenance easier. The [comparpq](https://github.com/adrientaudiere/comparpq) package will facilitate the comparison of phyloseq object with different taxonomy, different clustering methods, different samples with same modality or different primers. 
-- Add functions [assign_vsearch_lca()], [assign_sintax()] and internal function [write_temp_fasta()]
-- Add param `method` to `add_new_taxonomy_pq()` to allow the use of [dada2::assign_taxonomy()] (default, precedent only method available), [assign_sintax()] or [assign_vsearch_lca()] 
+- Introduce the idea of a pq-verse: some other packages will complete the MiscMetabar packages to make package maintenance easier. The `comparpq](https://github.com/adrientaudiere/comparpq) package will facilitate the comparison of phyloseq object with different taxonomy, different clustering methods, different samples with same modality or different primers. 
+- Add functions `assign_vsearch_lca()`, `assign_sintax()` and internal function `write_temp_fasta()`
+- Add param `method` to `add_new_taxonomy_pq()` to allow the use of `dada2::assign_taxonomy()` (default, precedent only method available), `assign_sintax()` or `assign_vsearch_lca()` 
 
 
 # MiscMetabar 0.10.4
@@ -149,14 +391,14 @@ nodes and tips
 - Add function `rarefy_sample_count_by_modality()` to equalize the number of samples for each levels of a modality (factor)
 - Add function `accu_plot_balanced_modality()` to plot accumulation curves with balanced modality (same number of samples per level) and depth rarefaction (same number of sequences per sample) 
 - Add function `adonis_rarperm_pq()` to compute multiple Permanova analyses on different sample depth rarefaction.
-- Add function `ggaluv_pq()` to plot taxonomic distribution in alluvial fashion with ggplot2 (using the [ggalluvial] package)
+- Add function `ggaluv_pq()` to plot taxonomic distribution in alluvial fashion with ggplot2 (using the `ggalluvial` package)
 - Add function `glmutli_pq()` to use automated model selection and multimodel inference with (G)LMs for phyloseq object
 
 
 ## New parameters
 
 - Add param `taxa_ranks` in function `psmelt_samples_pq()` to group results by samples AND taxonomic ranks. 
-- Add param `hill_scales` in functions `hill_tuckey_pq()` and `hill_p()` to choose the level of the hill number. 
+- Add param `q` in functions `hill_tuckey_pq()` and `hill_p()` to choose the level of the hill number. 
 - Add param `na_remove` in function `hill_pq()` to remove samples with NA in the factor fact.
 
 
@@ -168,9 +410,9 @@ nodes and tips
 - Add functions `signif_ancombc()` and `plot_ancombc_pq()` to plot significant results from `ancombc_pq()` function
 - Add function `distri_1_taxa()` to summarize the distribution of one given taxa across level of a modality
 - Add function `normalize_prop_pq()` to implement the method proposed by [McKnight et al. 2018](https://doi.org/10.5061/dryad.tn8qs35)
-- Add function `psmelt_samples_pq()` to build data frame of samples information including the number of sequences (Abundance) and Hill diversity metrics. Useful to use with the [ggstatsplot](https://indrajeetpatil.github.io/ggstatsplot/) packages (see examples).
+- Add function `psmelt_samples_pq()` to build data frame of samples information including the number of sequences (Abundance) and Hill diversity metrics. Useful to use with the [ggstatsplot](https://cran.r-project.org/package=ggstatsplot) packages (see examples).
 - Replace param `variable` by `fact` in function `ggbetween_pq()` and `hill_pq()` (keeping the variable option in `hill_pq()` for backward compatibility)
-- Fix a bug in the class of the return object of function `chimera_removal_vs()`. Now it return a matrix to be able to be parsed on to [dada2::getUniques()] 
+- Fix a bug in the class of the return object of function `chimera_removal_vs()`. Now it return a matrix to be able to be parsed on to `dada2::getUniques()` 
 
 # MiscMetabar 0.7
 

@@ -4,7 +4,16 @@
 \alias{ggbetween_pq}
 \title{Box/Violin plots for between-subjects comparisons of Hill Number}
 \usage{
-ggbetween_pq(physeq, fact, one_plot = FALSE, rarefy_by_sample = FALSE, ...)
+ggbetween_pq(
+  physeq,
+  fact,
+  one_plot = FALSE,
+  rarefy_by_sample = FALSE,
+  rngseed = FALSE,
+  verbose = TRUE,
+  q = c(0, 1, 2),
+  ...
+)
 }
 \arguments{
 \item{physeq}{(required) a \code{\link[phyloseq]{phyloseq-class}} object obtained
@@ -19,11 +28,25 @@ plot with the three plot inside using the patchwork package.}
 \item{rarefy_by_sample}{(logical, default FALSE) If TRUE, rarefy
 samples using \code{\link[phyloseq:rarefy_even_depth]{phyloseq::rarefy_even_depth()}} function}
 
+\item{rngseed}{(Optional). A single integer value passed to
+\code{\link[phyloseq:rarefy_even_depth]{phyloseq::rarefy_even_depth()}}, which is used to fix a seed for
+reproducibly random number generation (in this case, reproducibly
+random subsampling). If set to FALSE, then no fiddling with the RNG seed
+is performed, and it is up to the user to appropriately call set.seed
+beforehand to achieve reproducible results. Default is FALSE.}
+
+\item{verbose}{(logical). If TRUE, print additional information.}
+
+\item{q}{(numeric vector, default \code{c(0, 1, 2)}) Hill diversity orders to
+compute. One plot is produced per value. Hill numbers are more appropriate
+in DNA metabarcoding studies when \code{q > 0} (Alberdi & Gilbert, 2019;
+Calderón-Sanou et al., 2019).}
+
 \item{...}{Additional arguments passed on to \code{\link[ggstatsplot:ggbetweenstats]{ggstatsplot::ggbetweenstats()}} function.}
 }
 \value{
 Either an unique ggplot2 object (if one_plot is TRUE) or
-a list of 3 ggplot2 plot:
+a list of ggplot2 plots, one per Hill order in \code{q}. With default \code{q}:
 \itemize{
 \item plot_Hill_0 : the ggbetweenstats of Hill number 0 (= species richness)
 against the variable fact
@@ -55,13 +78,32 @@ use this function.
 }
 \examples{
 \donttest{
+library("divent")
 if (requireNamespace("ggstatsplot")) {
-  p <- ggbetween_pq(data_fungi, fact = "Time", p.adjust.method = "BH")
+  data_f <- clean_pq(prune_samples(
+  sample_names(data_fungi_sp_known)[1:10],
+  data_fungi_sp_known
+))
+  p <- ggbetween_pq(data_f, fact = "Time", p.adjust.method = "BH")
   p[[1]]
+}
+}
+\dontrun{
+if (requireNamespace("ggstatsplot")) {
   ggbetween_pq(data_fungi, fact = "Height", one_plot = TRUE)
   ggbetween_pq(data_fungi, fact = "Height", one_plot = TRUE, rarefy_by_sample = TRUE)
 }
 }
+}
+\references{
+Alberdi, A., & Gilbert, M. T. P. (2019). A guide to the application of
+Hill numbers to DNA-based diversity analyses. \emph{Molecular Ecology Resources}.
+\doi{10.1111/1755-0998.13014}
+
+Calderón-Sanou, I., Münkemüller, T., Boyer, F., Zinger, L., & Thuiller, W.
+(2019). From environmental DNA sequences to ecological conclusions: How
+strong is the influence of methodological choices? \emph{Journal of Biogeography},
+47. \doi{10.1111/jbi.13681}
 }
 \author{
 Adrien Taudière

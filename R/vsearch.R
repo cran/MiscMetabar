@@ -1,4 +1,192 @@
 ################################################################################
+#' Find the vsearch binary
+#'
+#' @description
+#' Searches for the vsearch binary in the following order:
+#' 1. The `MiscMetabar.vsearchpath` option (if set)
+#' 2. A previously installed copy in the MiscMetabar user data directory
+#'    (via [install_vsearch()])
+#' 3. The system PATH
+#'
+#' @return A character string with the path to the vsearch binary, or
+#'   `"vsearch"` as a fallback (relying on PATH resolution).
+#' @export
+#' @examples
+#' find_vsearch()
+#' @author Adrien Taudière
+#' @seealso [install_vsearch()], [is_vsearch_installed()]
+find_vsearch <- function() {
+  # 1. User-set option
+
+  opt <- getOption("MiscMetabar.vsearchpath")
+  if (!is.null(opt) && nzchar(opt)) {
+    return(opt)
+  }
+
+  # 2. Installed copy in user data dir
+  data_dir <- tools::R_user_dir("MiscMetabar", "data")
+  bin_name <- if (.Platform$OS.type == "windows") "vsearch.exe" else "vsearch"
+  local_bin <- file.path(data_dir, "bin", bin_name)
+  if (file.exists(local_bin)) {
+    return(local_bin)
+  }
+
+  # 3. Fallback to PATH
+  "vsearch"
+}
+
+################################################################################
+#' Install vsearch binary
+#'
+#' @description
+#' Downloads and installs the vsearch binary from
+#' [GitHub](https://github.com/torognes/vsearch/releases) into the
+#' MiscMetabar user data directory. This is especially useful on Windows
+#' where vsearch is not available from a system package manager.
+#'
+#' After installation, all MiscMetabar functions that use vsearch will
+#' find the binary automatically via [find_vsearch()].
+#'
+#' @param version (default: "latest") The vsearch version to install
+#'   (e.g. `"2.30.5"`). Use `"latest"` to fetch the most recent release.
+#' @param path (default: `tools::R_user_dir("MiscMetabar", "data")`)
+#'   Directory where vsearch will be installed.
+#' @param force (default: FALSE) If `TRUE`, re-download even if vsearch
+#'   is already installed.
+#'
+#' @return The path to the installed vsearch binary (invisibly).
+#' @export
+#' @examples
+#' \dontrun{
+#' install_vsearch()
+#' install_vsearch(version = "2.30.5")
+#' }
+#' @author Adrien Taudière
+#' @seealso [find_vsearch()], [is_vsearch_installed()]
+install_vsearch <- function(
+  version = "latest",
+  path = tools::R_user_dir("MiscMetabar", "data"),
+  force = FALSE
+) {
+  bin_name <- if (.Platform$OS.type == "windows") "vsearch.exe" else "vsearch"
+  dest_bin <- file.path(path, "bin", bin_name)
+
+  if (file.exists(dest_bin) && !force) {
+    message("vsearch is already installed at ", dest_bin)
+    message("Use force = TRUE to reinstall.")
+    return(invisible(dest_bin))
+  }
+
+  os <- tolower(Sys.info()[["sysname"]])
+  arch <- Sys.info()[["machine"]]
+
+  os_tag <- switch(os,
+    "linux" = "linux",
+    "darwin" = "macos",
+    "windows" = "win",
+    stop("Unsupported operating system: ", os)
+  )
+
+  arch_tag <- switch(arch,
+    "x86_64" = "x86_64",
+    "x86-64" = "x86_64",
+    "amd64" = "x86_64",
+    "aarch64" = "aarch64",
+    "arm64" = "aarch64",
+    stop("Unsupported architecture: ", arch)
+  )
+
+  # macOS universal is available as a fallback
+  if (os_tag == "macos") {
+    arch_tag <- "universal"
+  }
+
+  if (version == "latest") {
+    if (!requireNamespace("jsonlite", quietly = TRUE)) {
+      stop(
+        "Package 'jsonlite' is required to fetch the latest vsearch version. ",
+        "Install it with install.packages('jsonlite') or specify a version ",
+        "number directly (e.g. version = '2.30.5')."
+      )
+    }
+    release_url <- "https://api.github.com/repos/torognes/vsearch/releases/latest"
+    json_file <- tempfile(fileext = ".json")
+    utils::download.file(release_url, json_file, mode = "wb", quiet = TRUE)
+    release_info <- jsonlite::fromJSON(json_file)
+    version <- sub("^v", "", release_info$tag_name)
+    unlink(json_file)
+  }
+
+  platform_tag <- paste0(os_tag, "-", arch_tag)
+  ext <- if (os_tag == "win") ".zip" else ".tar.gz"
+  archive_name <- paste0("vsearch-", version, "-", platform_tag, ext)
+  download_url <- paste0(
+    "https://github.com/torognes/vsearch/releases/download/v",
+    version,
+    "/",
+    archive_name
+  )
+
+  message("Downloading vsearch ", version, " for ", platform_tag, "...")
+  archive_file <- file.path(tempdir(), archive_name)
+  utils::download.file(download_url, archive_file, mode = "wb", quiet = TRUE)
+
+  # Extract
+  extract_dir <- file.path(tempdir(), "vsearch_extract")
+  if (dir.exists(extract_dir)) {
+    unlink(extract_dir, recursive = TRUE)
+  }
+  dir.create(extract_dir)
+
+  if (ext == ".zip") {
+    utils::unzip(archive_file, exdir = extract_dir)
+  } else {
+    utils::untar(archive_file, exdir = extract_dir)
+  }
+
+  # Find the binary inside the extracted archive
+  extracted_bin <- list.files(
+    extract_dir,
+    pattern = paste0("^", bin_name, "$"),
+    recursive = TRUE,
+    full.names = TRUE
+  )
+
+  if (length(extracted_bin) == 0) {
+    stop("Could not find vsearch binary in the downloaded archive.")
+  }
+
+  # Copy binary (and DLLs on Windows) to destination
+  dest_bin_dir <- file.path(path, "bin")
+  dir.create(dest_bin_dir, recursive = TRUE, showWarnings = FALSE)
+
+  file.copy(extracted_bin[[1]], dest_bin, overwrite = TRUE)
+  if (.Platform$OS.type != "windows") {
+    Sys.chmod(dest_bin, mode = "0755")
+  }
+
+  # On Windows, also copy DLLs
+
+  if (os_tag == "win") {
+    dlls <- list.files(
+      dirname(extracted_bin[[1]]),
+      pattern = "\\.dll$",
+      full.names = TRUE
+    )
+    for (dll in dlls) {
+      file.copy(dll, file.path(dest_bin_dir, basename(dll)), overwrite = TRUE)
+    }
+  }
+
+  # Cleanup
+  unlink(archive_file)
+  unlink(extract_dir, recursive = TRUE)
+
+  message("vsearch ", version, " installed at ", dest_bin)
+  invisible(dest_bin)
+}
+
+################################################################################
 #' Search for a list of sequence in a fasta file against physeq reference
 #'   sequences using [vsearch](https://github.com/torognes/vsearch)
 #'
@@ -13,7 +201,7 @@
 #' @param seq2search (required if path_to_fasta is NULL) Either (i) a DNAStringSet object
 #'   or (ii) a character vector that will be convert to DNAStringSet using
 #'   [Biostrings::DNAStringSet()]
-#' @param vsearchpath (default: "vsearch") path to vsearch
+#' @param vsearchpath (default: [find_vsearch()]) path to vsearch
 #' @param id (default: 0.8) id for the option `--usearch_global` of the vsearch software
 #' @param iddef (default: 0) iddef for the option `--usearch_global` of the vsearch software
 #' @param keep_temporary_files (logical, default: FALSE) Do we keep temporary files
@@ -43,13 +231,15 @@
 #'   Please cite [vsearch](https://github.com/torognes/vsearch).
 #' @author Adrien Taudière
 
-vs_search_global <- function(physeq,
-                             path_to_fasta = NULL,
-                             seq2search = NULL,
-                             vsearchpath = "vsearch",
-                             id = 0.8,
-                             iddef = 0,
-                             keep_temporary_files = FALSE) {
+vs_search_global <- function(
+  physeq,
+  path_to_fasta = NULL,
+  seq2search = NULL,
+  vsearchpath = find_vsearch(),
+  id = 0.8,
+  iddef = 0,
+  keep_temporary_files = FALSE
+) {
   verify_pq(physeq)
   dna <- Biostrings::DNAStringSet(physeq@refseq)
   Biostrings::writeXStringSet(dna, paste0(tempdir(), "/", "temp.fasta"))
@@ -65,7 +255,10 @@ vs_search_global <- function(physeq,
     if (inherits(seq2search, "character")) {
       seq2search <- Biostrings::DNAStringSet(seq2search)
     }
-    Biostrings::writeXStringSet(seq2search, paste0(tempdir(), "seq2search.fasta"))
+    Biostrings::writeXStringSet(
+      seq2search,
+      paste0(tempdir(), "seq2search.fasta")
+    )
     seq2search <- paste0(tempdir(), "seq2search.fasta")
   } else if (!is.null(path_to_fasta)) {
     dna <- Biostrings::readDNAStringSet(path_to_fasta)
@@ -77,11 +270,11 @@ vs_search_global <- function(physeq,
     vsearchpath,
     paste(
       " --usearch_global ",
-      paste0(tempdir(), "/", "temp.fasta"),
+      shQuote(paste0(tempdir(), "/", "temp.fasta")),
       " --db ",
-      seq2search,
+      shQuote(seq2search),
       " --uc ",
-      paste0(tempdir(), "/", "temp.uc"),
+      shQuote(paste0(tempdir(), "/", "temp.uc")),
       " --id ",
       id,
       " --uc_allhits",
@@ -125,8 +318,6 @@ vs_search_global <- function(physeq,
 }
 ################################################################################
 
-
-
 ###############################################################################
 #' Re-cluster sequences of an object of class `physeq`
 #'   or cluster a list of DNA sequences using SWARM
@@ -151,24 +342,34 @@ vs_search_global <- function(physeq,
 #'   is NULL and dna_seq is provided.
 #' @param nproc (default: 1)
 #'   Set to number of cpus/processors to use for the clustering
-#' @param swarm_args (default : "--fastidious") a one length character
-#'   element defining other parameters to  passed on to swarm See other possible
+#' @param fastidious (logical, default TRUE), perform a second clustering pass
+#' to reduce the number of small clusters (recommended option by swarm authors).
+#' Not that if d is different from 1, fastidious is automatically set to FALSE.
+#' @param swarm_args a one length character
+#'   element defining other parameters to  passed on to swarm (e.g. "--mismatch-penalty 4").
+#'   See other possible
 #'   methods in the [SWARM pdf manual](https://github.com/torognes/swarm/blob/master/man/swarm_manual.pdf)
 #' @param tax_adjust (Default 0) See the man page
 #'   of [merge_taxa_vec()] for more details.
 #'   To conserved the taxonomic rank of the most abundant ASV,
 #'   set tax_adjust to 0 (default). For the moment only tax_adjust = 0 is
 #'   robust.
+#' @param rank_propagation (logical, default FALSE). Do we propagate the
+#' NA value from lower taxonomic rank to upper rank?
+#' See the man page of [merge_taxa_vec()] for more details.
+#' @param return_swarm_df (logical, default FALSE) Do we return the swarm
+#'  dataframe instead of the phyloseq object ? Default FALSE return a phyloseq
+#'  object if physeq is provided.
 #' @param keep_temporary_files (logical, default: FALSE) Do we keep temporary
 #'   files ?
 #'   - temp.fasta (refseq in fasta or dna_seq sequences)
 #'   - temp_output (classical output of SWARM)
 #'   - temp_uclust (clusters output of SWARM)
 #' @details This function use the `merge_taxa_vec` function to
-#'   merge taxa into clusters. By default tax_adjust = 0. See the man page
-#'   of [merge_taxa_vec()].
+#'   merge taxa into clusters. By default tax_adjust = 0 and rank_propagation = FALSE.
+#'  See the man page of [merge_taxa_vec()].
 #' @return A new object of class `physeq` or a list of cluster if dna_seq
-#'   args was used.
+#'   args was used or if return_swarm_df was set to TRUE.
 #'
 #' @references
 #'   SWARM can be downloaded from
@@ -207,19 +408,32 @@ vs_search_global <- function(physeq,
 #' This function is mainly a wrapper of the work of others.
 #'   Please cite [SWARM](https://github.com/torognes/swarm).
 
-swarm_clustering <- function(physeq = NULL,
-                             dna_seq = NULL,
-                             d = 1,
-                             swarmpath = "swarm",
-                             vsearch_path = "vsearch",
-                             nproc = 1,
-                             swarm_args = "--fastidious",
-                             tax_adjust = 0,
-                             keep_temporary_files = FALSE) {
+swarm_clustering <- function(
+  physeq = NULL,
+  dna_seq = NULL,
+  d = 1,
+  swarmpath = "swarm",
+  vsearch_path = find_vsearch(),
+  nproc = 1,
+  fastidious = TRUE,
+  swarm_args = "",
+  tax_adjust = 0,
+  rank_propagation = FALSE,
+  return_swarm_df = FALSE,
+  keep_temporary_files = FALSE
+) {
   dna <- physeq_or_string_to_dna(
     physeq = physeq,
     dna_seq = dna_seq
   )
+
+  if (d != 1) {
+    fastidious <- FALSE
+  }
+
+  if (fastidious && !grepl("--fastidious", swarm_args)) {
+    swarm_args <- paste0(swarm_args, " --fastidious ")
+  }
 
   if (!is.null(physeq)) {
     nseq <- taxa_sums(physeq)
@@ -229,14 +443,16 @@ swarm_clustering <- function(physeq = NULL,
     system2(
       swarmpath,
       paste0(
-        paste0(tempdir(), "/", "temp.fasta"),
+        shQuote(paste0(tempdir(), "/", "temp.fasta")),
         " -o ",
-        paste0(tempdir(), "/", "temp_output"),
+        shQuote(paste0(tempdir(), "/", "temp_output")),
         " ",
         " -u ",
-        paste0(tempdir(), "/", "temp_uclust"),
+        shQuote(paste0(tempdir(), "/", "temp_uclust")),
         " -t ",
         nproc,
+        " -d ",
+        d,
         " ",
         swarm_args
       ),
@@ -249,9 +465,9 @@ swarm_clustering <- function(physeq = NULL,
       vsearch_path,
       paste0(
         " --derep_fulllength ",
-        paste0(tempdir(), "/", "amplicons.fasta"),
+        shQuote(paste0(tempdir(), "/", "amplicons.fasta")),
         " --sizeout  --relabel_sha1 --fasta_width 0 --output ",
-        paste0(tempdir(), "/", "temp.fasta")
+        shQuote(paste0(tempdir(), "/", "temp.fasta"))
       ),
       stdout = TRUE,
       stderr = TRUE
@@ -259,15 +475,17 @@ swarm_clustering <- function(physeq = NULL,
     system2(
       swarmpath,
       paste0(
-        paste0(tempdir(), "/", "temp.fasta"),
+        shQuote(paste0(tempdir(), "/", "temp.fasta")),
         " -o ",
-        paste0(tempdir(), "/", "temp_output"),
+        shQuote(paste0(tempdir(), "/", "temp_output")),
         " ",
         " -u ",
-        paste0(tempdir(), "/", "temp_uclust"),
+        shQuote(paste0(tempdir(), "/", "temp_uclust")),
         " -z ",
         " -t ",
         nproc,
+        " -d ",
+        d,
         " ",
         swarm_args
       ),
@@ -292,6 +510,31 @@ swarm_clustering <- function(physeq = NULL,
       "target"
     )
 
+  if (
+    file.exists(paste0(tempdir(), "/", "temp.fasta")) &&
+      !keep_temporary_files
+  ) {
+    unlink(paste0(tempdir(), "/", "temp.fasta"))
+  }
+  if (
+    file.exists(paste0(tempdir(), "/", "temp_output")) &&
+      !keep_temporary_files
+  ) {
+    unlink(paste0(tempdir(), "/", "temp_output"))
+  }
+  if (
+    file.exists(paste0(tempdir(), "/", "temp_uclust")) &&
+      !keep_temporary_files
+  ) {
+    unlink(paste0(tempdir(), "/", "temp_uclust"))
+  }
+  if (
+    file.exists(paste0(tempdir(), "/", "amplicon.fasta")) &&
+      !keep_temporary_files
+  ) {
+    unlink(paste0(tempdir(), "/", "amplicon.fasta"))
+  }
+
   if (inherits(physeq, "phyloseq")) {
     clusters <- pack_clusts$cluster[pack_clusts$type != "C"]
     names(clusters) <-
@@ -299,41 +542,30 @@ swarm_clustering <- function(physeq = NULL,
 
     clusters <- clusters[match(taxa_names(physeq), names(clusters))]
 
-    new_obj <-
-      merge_taxa_vec(physeq,
+    new_physeq <-
+      merge_taxa_vec(
+        physeq,
         clusters,
-        tax_adjust = tax_adjust
+        tax_adjust = tax_adjust,
+        rank_propagation = rank_propagation
       )
-  } else if (inherits(dna_seq, "character")) {
-    new_obj <- pack_clusts
+    if (return_swarm_df) {
+      return(pack_clusts)
+    } else {
+      return(new_physeq)
+    }
+  } else if (
+    inherits(dna_seq, "character") | inherits(dna_seq, "DNAStringSet")
+  ) {
+    return(pack_clusts)
   } else {
     stop(
       "You must set the args physeq (object of class phyloseq) or
       dna_seq (character vector)."
     )
   }
-
-  if (file.exists(paste0(tempdir(), "/", "temp.fasta")) &&
-    !keep_temporary_files) {
-    unlink(paste0(tempdir(), "/", "temp.fasta"))
-  }
-  if (file.exists(paste0(tempdir(), "/", "temp_output")) &&
-    !keep_temporary_files) {
-    unlink(paste0(tempdir(), "/", "temp_output"))
-  }
-  if (file.exists(paste0(tempdir(), "/", "temp_uclust")) &&
-    !keep_temporary_files) {
-    unlink(paste0(tempdir(), "/", "temp_uclust"))
-  }
-  if (file.exists(paste0(tempdir(), "/", "amplicon.fasta")) &&
-    !keep_temporary_files) {
-    unlink(paste0(tempdir(), "/", "amplicon.fasta"))
-  }
-  return(new_obj)
 }
 ###############################################################################
-
-
 
 ###############################################################################
 #' Recluster sequences of an object of class `physeq`
@@ -359,12 +591,13 @@ swarm_clustering <- function(physeq = NULL,
 #'   To conserved the taxonomic rank of the most abundant ASV,
 #'   set tax_adjust to 0 (default). For the moment only tax_adjust = 0 is
 #'   robust
+#' @param rank_propagation (logical, default FALSE). Do we propagate the
+#' NA value from lower taxonomic rank to upper rank?
+#' See the man page of [merge_taxa_vec()] for more details.
 #' @param vsearch_cluster_method (default: "--cluster_size) See other possible
-#'   methods in the [vsearch manual](https://github.com/torognes/vsearch) (e.g. `--cluster_size` or `--cluster_smallmem`)
+#'   methods in the [vsearch manual](https://github.com/torognes/vsearch) (e.g. `--cluster_size` or `--cluster_fast`)
 #'   - `--cluster_fast` : Clusterize the fasta sequences in filename, automatically sort by decreasing sequence length beforehand.
 #'   - `--cluster_size` : Clusterize the fasta sequences in filename, automatically sort by decreasing sequence abundance beforehand.
-#'   - `--cluster_smallmem` : Clusterize the fasta sequences in filename without automatically modifying their order beforehand. Sequence are expected to be sorted by decreasing sequence length, unless *--usersort* is used.
-#'     In that case you may set `vsearch_args` to vsearch_args = "--strand both --usersort"
 #' @param vsearch_args (default : "--strand both") a one length character element defining other parameters to
 #'   passed on to vsearch.
 #' @param keep_temporary_files (logical, default: FALSE) Do we keep temporary files ?
@@ -397,15 +630,18 @@ swarm_clustering <- function(physeq = NULL,
 #' @details
 #' This function is mainly a wrapper of the work of others.
 #'   Please cite [vsearch](https://github.com/torognes/vsearch).
-vsearch_clustering <- function(physeq = NULL,
-                               dna_seq = NULL,
-                               nproc = 1,
-                               id = 0.97,
-                               vsearchpath = "vsearch",
-                               tax_adjust = 0,
-                               vsearch_cluster_method = "--cluster_size",
-                               vsearch_args = "--strand both",
-                               keep_temporary_files = FALSE) {
+vsearch_clustering <- function(
+  physeq = NULL,
+  dna_seq = NULL,
+  nproc = 1,
+  id = 0.97,
+  vsearchpath = find_vsearch(),
+  tax_adjust = 0,
+  rank_propagation = FALSE,
+  vsearch_cluster_method = "--cluster_size",
+  vsearch_args = "--strand both",
+  keep_temporary_files = FALSE
+) {
   dna <- physeq_or_string_to_dna(physeq = physeq, dna_seq = dna_seq)
 
   Biostrings::writeXStringSet(dna, paste0(tempdir(), "/", "temp.fasta"))
@@ -417,16 +653,16 @@ vsearch_clustering <- function(physeq = NULL,
         " ",
         vsearch_cluster_method,
         " ",
-        paste0(tempdir(), "/", "temp.fasta"),
+        shQuote(paste0(tempdir(), "/", "temp.fasta")),
         " ",
         vsearch_args
       ),
       " -id ",
       id,
       " --centroids ",
-      paste0(tempdir(), "/", "cluster.fasta"),
+      shQuote(paste0(tempdir(), "/", "cluster.fasta")),
       " --uc ",
-      paste0(tempdir(), "/", "temp.uc")
+      shQuote(paste0(tempdir(), "/", "temp.uc"))
     ),
     stdout = TRUE,
     stderr = TRUE
@@ -454,9 +690,11 @@ vsearch_clustering <- function(physeq = NULL,
 
   if (inherits(physeq, "phyloseq")) {
     new_obj <-
-      merge_taxa_vec(physeq,
+      merge_taxa_vec(
+        physeq,
         clusters,
-        tax_adjust = tax_adjust
+        tax_adjust = tax_adjust,
+        rank_propagation = rank_propagation
       )
   } else if (inherits(dna_seq, "character")) {
     new_obj <- pack_clusts
@@ -466,22 +704,27 @@ vsearch_clustering <- function(physeq = NULL,
     )
   }
 
-  if (file.exists(paste0(tempdir(), "/", "temp.fasta")) &&
-    !keep_temporary_files) {
+  if (
+    file.exists(paste0(tempdir(), "/", "temp.fasta")) &&
+      !keep_temporary_files
+  ) {
     unlink(paste0(tempdir(), "/", "temp.fasta"))
   }
-  if (file.exists(paste0(tempdir(), "/", "cluster.fasta")) &&
-    !keep_temporary_files) {
+  if (
+    file.exists(paste0(tempdir(), "/", "cluster.fasta")) &&
+      !keep_temporary_files
+  ) {
     unlink(paste0(tempdir(), "/", "cluster.fasta"))
   }
-  if (file.exists(paste0(tempdir(), "/", "temp.uc")) &&
-    !keep_temporary_files) {
+  if (
+    file.exists(paste0(tempdir(), "/", "temp.uc")) &&
+      !keep_temporary_files
+  ) {
     unlink(paste0(tempdir(), "/", "temp.uc"))
   }
   return(new_obj)
 }
 ###############################################################################
-
 
 ################################################################################
 #' Search for a list of sequence in an object to remove chimera taxa
@@ -500,7 +743,7 @@ vsearch_clustering <- function(physeq = NULL,
 #'   filtering.
 #'
 #'  - "Discard_only_chim" will only discard taxa classify as chimera by vsearch
-#'  - "Select_only_non_chim" will only select taxa classify as non-chimera by
+#'  - "Select_only_non_chim_seqlen_filtered" will only select taxa classify as non-chimera by
 #'    vsearch(after filtering taxa based on their sequence length by the
 #'    parameter `min_seq_length` from the [chimera_detection_vs()] function)
 #'  - "Select_only_chim" will only select taxa classify as chimera by
@@ -523,31 +766,46 @@ vsearch_clustering <- function(physeq = NULL,
 #' @examplesIf MiscMetabar::is_vsearch_installed()
 #' \donttest{
 #' data_fungi_nochim <- chimera_removal_vs(data_fungi)
-#' data_fungi_nochim_16 <- chimera_removal_vs(data_fungi,
-#'   abskew = 16,
-#'   min_seq_length = 10
+#' }
+#' \dontrun{
+#' # Adding a chimeric sequence for the example
+#' data_fungi_with_chim <- data_fungi
+#' data_fungi_with_chim@refseq["ASV1710"] <- Biostrings::xscat(
+#'   Biostrings::subseq(data_fungi_with_chim@refseq[1], start = 1, end = 150),
+#'   Biostrings::subseq(data_fungi_with_chim@refseq[4], start = 151, end = 300)
 #' )
+#' data_fungi_nochim <- chimera_removal_vs(data_fungi)
+#'
+#' # Higher value of abskew parameter is less stringent
+#' data_fungi_nochim_16 <- chimera_removal_vs(data_fungi,
+#'   abskew = 16, min_seq_length = 10
+#' )
+#'
+#' # Potential Chimeric ASVs detected by vsearch
+#' chim_asv <- taxa_names(data_fungi_with_chim)[!taxa_names(data_fungi_with_chim)
+#' %in% taxa_names(data_fungi_nochim)]
+#' "ASV1710" %in% chim_asv
+#' track_wkflow(list(data_fungi_with_chim, data_fungi_nochim))
+#'
 #' data_fungi_nochim2 <-
-#'   chimera_removal_vs(data_fungi, type = "Select_only_non_chim")
+#'   chimera_removal_vs(data_fungi, type = "Select_only_non_chim_seqlen_filtered")
 #' data_fungi_chimera <-
 #'   chimera_removal_vs(data_fungi, type = "Select_only_chim")
 #' }
 #' @author Adrien Taudière
 #' @details
 #' This function is mainly a wrapper of the work of others.
-#'   Please make [vsearch](https://github.com/torognes/vsearch).
-
+#'   Please cite [vsearch](https://github.com/torognes/vsearch).
 
 chimera_removal_vs <-
-  function(object,
-           type = "Discard_only_chim",
-           clean_pq = FALSE,
-           ...) {
-    if (inherits(object, "dada") ||
-      inherits(object, "derep") ||
-      inherits(object, "data.frame") ||
-      inherits(object, "list")) {
-      object <- makeSequenceTable(object)
+  function(object, type = "Discard_only_chim", clean_pq = FALSE, ...) {
+    if (
+      inherits(object, "dada") ||
+        inherits(object, "derep") ||
+        inherits(object, "data.frame") ||
+        inherits(object, "list")
+    ) {
+      object <- dada2::makeSequenceTable(object)
     }
 
     if (inherits(object, "matrix")) {
@@ -559,15 +817,21 @@ chimera_removal_vs <-
         )
       if (type == "Discard_only_chim") {
         seq_tab_final <-
-          object[, !colnames(object) %in% as.character(chim_detect$chimera)]
-      } else if (type == "Select_only_non_chim") {
-        seq_tab_final <- seq_tab_Pairs[, as.character(chim_rm$non_chimera)]
+          object[,
+            !colnames(object) %in% as.character(chim_detect$chimera),
+            drop = FALSE
+          ]
+      } else if (type == "Select_only_non_chim_seqlen_filtered") {
+        seq_tab_final <- object[,
+          as.character(chim_rm$non_chimera),
+          drop = FALSE
+        ]
       } else if (type == "Select_only_chim") {
-        seq_tab_final <- seq_tab_Pairs[, as.character(chim_rm$chimera)]
+        seq_tab_final <- object[, as.character(chim_rm$chimera), drop = FALSE]
       } else {
         stop(
           "Type must be set to one of 'Discard_only_chim',
-             'Select_only_non_chim', or 'Select_only_chim'"
+             'Select_only_non_chim_seqlen_filtered', or 'Select_only_chim'"
         )
       }
       seq_tab_final <- seq_tab_final
@@ -589,9 +853,10 @@ chimera_removal_vs <-
         names(cond) <- names(refseq(object))
         new_physeq <-
           subset_taxa_pq(object, condition = cond)
-      } else if (type == "Select_only_non_chim") {
+      } else if (type == "Select_only_non_chim_seqlen_filtered") {
         cond <-
-          as.character(refseq(object)) %in% as.character(chim_detect$non_chimera)
+          as.character(refseq(object)) %in%
+          as.character(chim_detect$non_chimera)
         names(cond) <- names(refseq(object))
         new_physeq <-
           subset_taxa_pq(object, condition = cond)
@@ -604,7 +869,7 @@ chimera_removal_vs <-
       } else {
         stop(
           "Type must be set to one of 'Discard_only_chim',
-             'Select_only_non_chim', or 'Select_only_chim'"
+             'Select_only_non_chim_seqlen_filtered', or 'Select_only_chim'"
         )
       }
       if (clean_pq) {
@@ -614,8 +879,6 @@ chimera_removal_vs <-
     }
   }
 ################################################################################
-
-
 
 ################################################################################
 #' Detect for chimera taxa using [vsearch](https://github.com/torognes/vsearch)
@@ -664,23 +927,27 @@ chimera_removal_vs <-
 #' @details
 #' This function is mainly a wrapper of the work of others.
 #'   Please make [vsearch](https://github.com/torognes/vsearch).
-chimera_detection_vs <- function(seq2search,
-                                 nb_seq,
-                                 vsearchpath = "vsearch",
-                                 abskew = 2,
-                                 min_seq_length = 100,
-                                 vsearch_args = "--fasta_width 0",
-                                 keep_temporary_files = FALSE) {
+chimera_detection_vs <- function(
+  seq2search,
+  nb_seq,
+  vsearchpath = find_vsearch(),
+  abskew = 2,
+  min_seq_length = 100,
+  vsearch_args = "--fasta_width 0",
+  keep_temporary_files = FALSE
+) {
   dna_raw <- Biostrings::DNAStringSet(seq2search)
   names(dna_raw) <- paste0(
-    "Taxa", seq(1, length(seq2search)),
-    ";size=", nb_seq
+    "Taxa",
+    seq(1, length(seq2search)),
+    ";size=",
+    nb_seq
   )
 
   dna <- dna_raw[Biostrings::width(dna_raw) >= min_seq_length]
   abun <- unlist(strsplit(names(dna), split = "="))
   abun_tot <-
-    sum(as.numeric(abun[seq(2, 2 * length(abun), by = 2)]), na.rm = T)
+    sum(as.numeric(abun[seq(2, 2 * length(abun), by = 2)]), na.rm = TRUE)
 
   message(
     paste(
@@ -709,15 +976,15 @@ chimera_detection_vs <- function(seq2search,
     vsearchpath,
     paste0(
       " --uchime_denovo ",
-      paste0(tempdir(), "/", "temp.fasta"),
+      shQuote(paste0(tempdir(), "/", "temp.fasta")),
       " --abskew ",
       abskew,
       " --nonchimeras ",
-      paste0(tempdir(), "/", "non_chimeras.fasta"),
+      shQuote(paste0(tempdir(), "/", "non_chimeras.fasta")),
       " --chimeras ",
-      paste0(tempdir(), "/", "chimeras.fasta"),
+      shQuote(paste0(tempdir(), "/", "chimeras.fasta")),
       " --borderline ",
-      paste0(tempdir(), "/", "borderline.fasta"),
+      shQuote(paste0(tempdir(), "/", "borderline.fasta")),
       " ",
       vsearch_args
     ),
@@ -768,7 +1035,8 @@ chimera_detection_vs <- function(seq2search,
 #' refseq slot from a phyloseq object
 #'
 #' @inheritParams assign_sintax
-#' @param temporary_fasta_file The name of a temporary_fasta_file (default "temp.fasta")
+#' @param temporary_fasta_file The path of a temporary fasta file
+#'   (default in `tempdir()`)
 #' @param return_DNAStringSet (Logical default FALSE). If true, the temporary fasta file
 #'   is removed and a DNAStringSet is return
 #' @seealso [assign_sintax()], [assign_vsearch_lca]
@@ -777,13 +1045,15 @@ chimera_detection_vs <- function(seq2search,
 #' @noRd
 #'
 
-write_temp_fasta <- function(physeq,
-                             seq2search,
-                             temporary_fasta_file = "temp.fasta",
-                             behavior = NULL,
-                             clean_pq = TRUE,
-                             verbose = TRUE,
-                             return_DNAStringSet = FALSE) {
+write_temp_fasta <- function(
+  physeq,
+  seq2search,
+  temporary_fasta_file = paste0(tempdir(), "/temp.fasta"),
+  behavior = NULL,
+  clean_pq = TRUE,
+  verbose = TRUE,
+  return_DNAStringSet = FALSE
+) {
   if (!is.null(physeq) && !is.null(seq2search)) {
     stop("You must enter a single parameter from physeq and seq2search.")
   } else if (is.null(seq2search)) {
@@ -866,13 +1136,14 @@ write_temp_fasta <- function(physeq,
 #'   below the min_bootstrap value, the taxonomy information is set to NA.
 #' @param keep_temporary_files (logical, default: FALSE) Do we keep temporary files?
 #'
-#' - temporary_fasta_file (default "temp.fasta") : the fasta file from physeq
+#' - temporary_fasta_file (default in `tempdir()`) : the fasta file from physeq
 #'   or seq2search
 #'
 #' - "output_taxo_vs.txt" : see Vsearch Manual for parameter --tabbedout
 #'
 #' @param verbose (logical). If TRUE, print additional information.
-#' @param temporary_fasta_file The name of a temporary_fasta_file (default "temp.fasta")
+#' @param temporary_fasta_file The path of a temporary fasta file
+#'   (default in `tempdir()`)
 #' @param cmd_args Additional arguments passed on to vsearch sintax cmd.
 #'   By default cmd_args is equal to "--sintax_random" as recommended by
 #'   [Torognes](https://github.com/torognes/vsearch/issues/535).
@@ -907,8 +1178,6 @@ write_temp_fasta <- function(physeq,
 #'       "Order", "Family", "Genus", "Species"
 #'     )
 #'   )) |>
-#'   # mutate(valuerank = forcats::fct_reorder(valuerank,
-#'   #   as.integer(name), .desc = TRUE)) |>
 #'   ggplot(aes(valuebootstrap,
 #'     valuerank,
 #'     fill = name
@@ -921,23 +1190,37 @@ write_temp_fasta <- function(physeq,
 #' @details
 #' This function is mainly a wrapper of the work of others.
 #'   Please cite [vsearch](https://github.com/torognes/vsearch).
-assign_sintax <- function(physeq = NULL,
-                          ref_fasta = NULL,
-                          seq2search = NULL,
-                          behavior = c("return_matrix", "add_to_phyloseq", "return_cmd"),
-                          vsearchpath = "vsearch",
-                          clean_pq = TRUE,
-                          nproc = 1,
-                          suffix = "",
-                          taxa_ranks = c("Kingdom", "Phylum", "Class", "Order", "Family", "Genus", "Species"),
-                          min_bootstrap = 0.5,
-                          keep_temporary_files = FALSE,
-                          verbose = FALSE,
-                          temporary_fasta_file = "temp.fasta",
-                          cmd_args = "--sintax_random",
-                          too_few = "align_start",
-                          too_many = "drop") {
+assign_sintax <- function(
+  physeq = NULL,
+  ref_fasta = NULL,
+  seq2search = NULL,
+  behavior = c("return_matrix", "add_to_phyloseq", "return_cmd"),
+  vsearchpath = find_vsearch(),
+  clean_pq = TRUE,
+  nproc = 1,
+  suffix = "",
+  taxa_ranks = c(
+    "Kingdom",
+    "Phylum",
+    "Class",
+    "Order",
+    "Family",
+    "Genus",
+    "Species"
+  ),
+  min_bootstrap = 0.5,
+  keep_temporary_files = FALSE,
+  verbose = FALSE,
+  temporary_fasta_file = paste0(tempdir(), "/temp.fasta"),
+  cmd_args = "--sintax_random",
+  too_few = "align_start",
+  too_many = "drop"
+) {
   behavior <- match.arg(behavior)
+
+  .validate_ref_format(ref_fasta, "sintax", "assign_sintax")
+
+  output_taxo_file <- paste0(tempdir(), "/output_taxo_vs.txt")
 
   write_temp_fasta(
     physeq = physeq,
@@ -955,10 +1238,11 @@ assign_sintax <- function(physeq = NULL,
   cmd_sintax <-
     paste0(
       " --sintax ",
-      temporary_fasta_file,
+      shQuote(temporary_fasta_file),
       " --db ",
-      ref_fasta,
-      " --tabbedout output_taxo_vs.txt ",
+      shQuote(ref_fasta),
+      " --tabbedout ",
+      shQuote(output_taxo_file),
       " --threads ",
       nproc,
       " ",
@@ -972,16 +1256,35 @@ assign_sintax <- function(physeq = NULL,
     return("sintax" = paste0(vsearchpath, " ", cmd_sintax))
   }
 
-  system2(vsearchpath,
+  vsearch_output <- system2(
+    vsearchpath,
     args = cmd_sintax,
     stdout = TRUE,
     stderr = TRUE
   )
+  vsearch_status <- attr(vsearch_output, "status")
 
-  if (!file.exists("output_taxo_vs.txt")) {
-    warning("No taxonomic assignation were maded.")
+  if (!is.null(vsearch_status) && vsearch_status != 0) {
     if (!keep_temporary_files) {
       unlink(temporary_fasta_file)
+      unlink(output_taxo_file)
+    }
+    stop(
+      "Vsearch sintax failed with status ",
+      vsearch_status,
+      ".\n",
+      paste(vsearch_output, collapse = "\n")
+    )
+  }
+
+  if (
+    !file.exists(output_taxo_file) ||
+      file.info(output_taxo_file)$size == 0
+  ) {
+    warning("No taxonomic assignation were made.")
+    if (!keep_temporary_files) {
+      unlink(temporary_fasta_file)
+      unlink(output_taxo_file)
     }
     if (behavior == "add_to_phyloseq") {
       return(physeq)
@@ -989,11 +1292,16 @@ assign_sintax <- function(physeq = NULL,
       return(NULL)
     }
   }
-  res_sintax <- read.csv("output_taxo_vs.txt", sep = "\t", header = F)
+  res_sintax <- read.csv(output_taxo_file, sep = "\t", header = FALSE)
   taxa_names <- res_sintax$V1
   res_sintax <- tibble(res_sintax$V2, taxa_names)
   res_sintax <- res_sintax |>
-    tidyr::separate_wider_delim(-taxa_names, names = paste0(taxa_ranks, suffix), delim = ",", too_few = too_few) |>
+    tidyr::separate_wider_delim(
+      -taxa_names,
+      names = paste0(taxa_ranks, suffix),
+      delim = ",",
+      too_few = too_few
+    ) |>
     tidyr::pivot_longer(-taxa_names) |>
     tidyr::separate_wider_delim(
       value,
@@ -1022,15 +1330,24 @@ assign_sintax <- function(physeq = NULL,
 
   if (!keep_temporary_files) {
     unlink(temporary_fasta_file)
-    unlink("output_taxo_vs.txt")
+    unlink(output_taxo_file)
   }
 
   if (behavior == "add_to_phyloseq") {
-    tax_tab <- as.data.frame(as.matrix(physeq@tax_table))
-    tax_tab$taxa_names <- taxa_names(physeq)
+    if (is.null(physeq@tax_table)) {
+      tax_tab <- data.frame(
+        taxa_names = taxa_names(physeq),
+        stringsAsFactors = FALSE
+      )
+    } else {
+      tax_tab <- as.data.frame(as.matrix(physeq@tax_table))
+      tax_tab$taxa_names <- taxa_names(physeq)
+    }
 
     new_physeq <- physeq
-    new_tax_tab <- left_join(tax_tab, res_sintax_wide_taxo_filter,
+    new_tax_tab <- left_join(
+      tax_tab,
+      res_sintax_wide_taxo_filter,
       by = join_by(taxa_names)
     ) |>
       dplyr::select(-taxa_names) |>
@@ -1146,16 +1463,16 @@ assign_sintax <- function(physeq = NULL,
 #'   See Vsearch Manual for parameter `--maxaccepts`
 #' @param keep_temporary_files (logical, default: FALSE) Do we keep temporary files?
 #'
-#' - temporary_fasta_file (default "temp.fasta") : the fasta file from physeq or
-#'   seq2search
+#' - temporary_fasta_file (default in `tempdir()`) : the fasta file from physeq
+#'   or seq2search
 #'
 #' - "out_lca.txt" : see Vsearch Manual for parameter --lcaout
 #'
 #' - "userout.txt" : see Vsearch Manual for parameter --userout
 #'
 #' @param verbose (logical). If TRUE, print additional information.
-#' @param temporary_fasta_file Name of the temporary fasta file. Only useful
-#'   with keep_temporary_files = TRUE.
+#' @param temporary_fasta_file The path of a temporary fasta file
+#'   (default in `tempdir()`).
 #' @param cmd_args Additional arguments passed on to vsearch usearch_global cmd.
 #' @param too_few (default value "align_start") see [tidyr::separate_wider_delim()]
 #' @param nb_voting (Int, default NULL). The number of taxa to keep before apply
@@ -1180,10 +1497,11 @@ assign_sintax <- function(physeq = NULL,
 #'   ref_fasta = system.file("extdata", "mini_UNITE_fungi.fasta.gz", package = "MiscMetabar"),
 #'   lca_cutoff = 0.9, behavior = "add_to_phyloseq"
 #' )
-#'
+#' }
+#' \dontrun{
 #' data_fungi_mini_new2 <- assign_vsearch_lca(data_fungi_mini,
 #'   ref_fasta = system.file("extdata", "mini_UNITE_fungi.fasta.gz", package = "MiscMetabar"),
-#'   id = 0.8, behavior = "add_to_phyloseq", top_hits_only = FALSE
+#'   id = 0.6, behavior = "add_to_phyloseq", top_hits_only = FALSE
 #' )
 #'
 #' data_fungi_mini_new3 <- assign_vsearch_lca(data_fungi_mini,
@@ -1197,35 +1515,51 @@ assign_sintax <- function(physeq = NULL,
 #' This function is mainly a wrapper of the work of others.
 #'   Please cite [vsearch](https://github.com/torognes/vsearch) and
 #'   [stampa](https://github.com/frederic-mahe/stampa)
-assign_vsearch_lca <- function(physeq = NULL,
-                               ref_fasta = NULL,
-                               seq2search = NULL,
-                               behavior = c("return_matrix", "add_to_phyloseq", "return_cmd"),
-                               vsearchpath = "vsearch",
-                               clean_pq = TRUE,
-                               taxa_ranks = c("Kingdom", "Phylum", "Class", "Order", "Family", "Genus", "Species"),
-                               nproc = 1,
-                               suffix = "_sintax",
-                               id = 0.5,
-                               lca_cutoff = 1,
-                               maxrejects = 32,
-                               top_hits_only = TRUE,
-                               maxaccepts = 0,
-                               keep_temporary_files = FALSE,
-                               verbose = TRUE,
-                               temporary_fasta_file = "temp.fasta",
-                               cmd_args = "",
-                               too_few = "align_start",
-                               vote_algorithm = NULL,
-                               nb_voting = NULL,
-                               strict = FALSE,
-                               nb_agree_threshold = 1,
-                               preference_index = NULL,
-                               collapse_string = "/",
-                               replace_collapsed_rank_by_NA = TRUE,
-                               simplify_taxo = TRUE,
-                               keep_vsearch_score = FALSE) {
+assign_vsearch_lca <- function(
+  physeq = NULL,
+  ref_fasta = NULL,
+  seq2search = NULL,
+  behavior = c("return_matrix", "add_to_phyloseq", "return_cmd"),
+  vsearchpath = find_vsearch(),
+  clean_pq = TRUE,
+  taxa_ranks = c(
+    "Kingdom",
+    "Phylum",
+    "Class",
+    "Order",
+    "Family",
+    "Genus",
+    "Species"
+  ),
+  nproc = 1,
+  suffix = "_sintax",
+  id = 0.5,
+  lca_cutoff = 1,
+  maxrejects = 32,
+  top_hits_only = TRUE,
+  maxaccepts = 0,
+  keep_temporary_files = FALSE,
+  verbose = TRUE,
+  temporary_fasta_file = paste0(tempdir(), "/temp.fasta"),
+  cmd_args = "",
+  too_few = "align_start",
+  vote_algorithm = NULL,
+  nb_voting = NULL,
+  strict = FALSE,
+  nb_agree_threshold = 1,
+  preference_index = NULL,
+  collapse_string = "/",
+  replace_collapsed_rank_by_NA = TRUE,
+  simplify_taxo = TRUE,
+  keep_vsearch_score = FALSE
+) {
   behavior <- match.arg(behavior)
+
+  .validate_ref_format(ref_fasta, "sintax", "assign_vsearch_lca")
+
+  out_lca_file <- paste0(tempdir(), "/out_lca.txt")
+  userout_file <- paste0(tempdir(), "/userout.txt")
+
   write_temp_fasta(
     physeq = physeq,
     seq2search = seq2search,
@@ -1237,9 +1571,13 @@ assign_vsearch_lca <- function(physeq = NULL,
 
   cmd_usearch <-
     paste0(
-      " --usearch_global temp.fasta --db ",
-      ref_fasta,
-      " --lcaout out_lca.txt -id ",
+      " --usearch_global ",
+      shQuote(temporary_fasta_file),
+      " --db ",
+      shQuote(ref_fasta),
+      " --lcaout ",
+      shQuote(out_lca_file),
+      " -id ",
       id,
       " --threads ",
       nproc,
@@ -1250,7 +1588,9 @@ assign_vsearch_lca <- function(physeq = NULL,
       maxrejects,
       " --lca_cutoff  ",
       lca_cutoff,
-      " --userout userout.txt ",
+      " --userout ",
+      shQuote(userout_file),
+      " ",
       cmd_args
     )
 
@@ -1266,14 +1606,40 @@ assign_vsearch_lca <- function(physeq = NULL,
     return("sintax" = paste0(vsearchpath, " ", cmd_usearch))
   }
 
-  system2(vsearchpath,
+  vsearch_output <- system2(
+    vsearchpath,
     args = cmd_usearch,
     stdout = TRUE,
     stderr = TRUE
   )
+  vsearch_status <- attr(vsearch_output, "status")
 
+  if (!is.null(vsearch_status) && vsearch_status != 0) {
+    if (!keep_temporary_files) {
+      unlink(temporary_fasta_file)
+    }
+    stop(
+      "Vsearch usearch_global failed with status ",
+      vsearch_status,
+      ".\n",
+      paste(vsearch_output, collapse = "\n")
+    )
+  }
+
+  if (!file.exists(out_lca_file) || file.info(out_lca_file)$size == 0) {
+    warning("No LCA output produced (out_lca.txt is missing or empty).")
+    if (!keep_temporary_files) {
+      unlink(temporary_fasta_file)
+    }
+    if (behavior == "add_to_phyloseq") {
+      warning("physeq object returned unchanged.")
+      return(physeq)
+    } else {
+      return(NULL)
+    }
+  }
   if (top_hits_only || is.null(vote_algorithm)) {
-    res_usearch <- read.csv("out_lca.txt", sep = "\t", header = F)
+    res_usearch <- read.csv(out_lca_file, sep = "\t", header = FALSE)
 
     taxa_names <- res_usearch$V1
     res_usearch <- tibble(res_usearch$V2, taxa_names)
@@ -1287,7 +1653,8 @@ assign_vsearch_lca <- function(physeq = NULL,
     }
 
     res_usearch <- res_usearch |>
-      tidyr::separate_wider_delim(-taxa_names,
+      tidyr::separate_wider_delim(
+        -taxa_names,
         names = paste0(taxa_ranks, suffix),
         delim = ",",
         too_few = too_few
@@ -1299,7 +1666,7 @@ assign_vsearch_lca <- function(physeq = NULL,
       res_usearch |>
       tidyr::pivot_wider(names_from = name, values_from = value)
   } else if (!is.null(vote_algorithm)) {
-    res_usearch <- read.csv("userout.txt", sep = "\t", header = F)
+    res_usearch <- read.csv(userout_file, sep = "\t", header = FALSE)
 
     if (is.null(nb_voting)) {
       nb_voting <- max(table(res_usearch$V1))
@@ -1308,11 +1675,13 @@ assign_vsearch_lca <- function(physeq = NULL,
     res_usearch_wide_taxo <- res_usearch |>
       rename(taxa_names = V1) |>
       rename(score = V2) |>
-      tidyr::separate(`V3`,
+      tidyr::separate(
+        `V3`,
         into = c(paste0("Taxa_name_db", suffix), "Classification"),
         sep = ";tax="
       ) |>
-      tidyr::separate("Classification",
+      tidyr::separate(
+        "Classification",
         into = paste0(taxa_ranks, suffix),
         sep = ","
       ) |>
@@ -1344,8 +1713,8 @@ assign_vsearch_lca <- function(physeq = NULL,
 
   if (!keep_temporary_files) {
     unlink(temporary_fasta_file)
-    unlink("out_lca.txt")
-    unlink("userout.txt")
+    unlink(out_lca_file)
+    unlink(userout_file)
   }
 
   if (!keep_vsearch_score) {
@@ -1357,11 +1726,20 @@ assign_vsearch_lca <- function(physeq = NULL,
   }
 
   if (behavior == "add_to_phyloseq") {
-    tax_tab <- as.data.frame(as.matrix(physeq@tax_table))
-    tax_tab$taxa_names <- taxa_names(physeq)
+    if (is.null(physeq@tax_table)) {
+      tax_tab <- data.frame(
+        taxa_names = taxa_names(physeq),
+        stringsAsFactors = FALSE
+      )
+    } else {
+      tax_tab <- as.data.frame(as.matrix(physeq@tax_table))
+      tax_tab$taxa_names <- taxa_names(physeq)
+    }
 
     new_physeq <- physeq
-    new_tax_tab <- left_join(tax_tab, res_usearch_wide_taxo,
+    new_tax_tab <- left_join(
+      tax_tab,
+      res_usearch_wide_taxo,
       by = join_by(taxa_names)
     ) |>
       dplyr::select(-taxa_names) |>

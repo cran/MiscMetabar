@@ -7,7 +7,7 @@
 chimera_detection_vs(
   seq2search,
   nb_seq,
-  vsearchpath = "vsearch",
+  vsearchpath = find_vsearch(),
   abskew = 2,
   min_seq_length = 100,
   vsearch_args = "--fasta_width 0",
@@ -16,7 +16,7 @@ chimera_detection_vs(
 }
 \arguments{
 \item{seq2search}{(required) a list of DNA sequences coercible by function
-\code{\link[Biostrings:XStringSet-class]{Biostrings::DNAStringSet()}}}
+\code{\link[Biostrings:DNAStringSet]{Biostrings::DNAStringSet()}}}
 
 \item{nb_seq}{(required) a numeric vector giving the number of sequences for
 each DNA sequences}

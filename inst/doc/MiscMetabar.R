@@ -23,7 +23,7 @@ gp <- subset_taxa(GlobalPatterns, GlobalPatterns@tax_table[, 1] == "Archaea")
 sankey_pq(gp, taxa = c(1:5))
 
 ## -----------------------------------------------------------------------------
-if(packageVersion("ggplot2") < "4.0.0"){
+if (packageVersion("ggplot2") < "4.0.0") {
   upset_pq(gp, "SampleType", taxa = "Class")
 }
 

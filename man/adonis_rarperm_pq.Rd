@@ -23,7 +23,7 @@ adonis_rarperm_pq(
 \item{physeq}{(required) a \code{\link[phyloseq]{phyloseq-class}} object obtained
 using the \code{phyloseq} package.}
 
-\item{formula}{(required) the right part of a formula for \code{\link[vegan:adonis]{vegan::adonis2()}}.
+\item{formula}{(required) the right part of a formula for \code{\link[vegan:adonis2]{vegan::adonis2()}}.
 Variables must be present in the \code{physeq@sam_data} slot.}
 
 \item{dist_method}{(default "bray") the distance used. See
@@ -57,7 +57,7 @@ Minimum quantile is computed using 1-quantile_prob.}
 
 \item{sample.size}{(int) A single integer value equal to the number of
 reads being simulated, also known as the depth. See
-\code{\link[phyloseq:rarefy_even_depth]{phyloseq::rarefy_even_depth()}}.}
+\code{\link[phyloseq:rarefy_even_depth]{phyloseq::rarefy_even_depth()}} and \code{\link[=rarefy_even_depth_pq]{rarefy_even_depth_pq()}}.}
 
 \item{...}{Other params to be passed on to \code{\link[=adonis_pq]{adonis_pq()}} function}
 }
@@ -77,10 +77,12 @@ seed.number. This reduce the risk of a random drawing of a exceptional
 situation of an unique rarefaction.
 }
 \examples{
+\donttest{
 if (requireNamespace("vegan")) {
   data_fungi_woNA <-
-    subset_samples(data_fungi, !is.na(Time) & !is.na(Height))
+    subset_samples(data_fungi_mini, !is.na(Time) & !is.na(Height))
   adonis_rarperm_pq(data_fungi_woNA, "Time*Height", na_remove = TRUE, nperm = 3)
+}
 }
 }
 \seealso{

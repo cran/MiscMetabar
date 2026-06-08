@@ -1,6 +1,5 @@
 
 ![R](https://img.shields.io/badge/r-%23276DC3.svg?style=for-the-badge&logo=r&logoColor=white)
-<a href="https://zenodo.org/badge/latestdoi/268765075"><img src="https://zenodo.org/badge/268765075.svg" alt="DOI"></a>
 [![codecov](https://codecov.io/gh/adrientaudiere/MiscMetabar/graph/badge.svg?token=NXFRSIKYC0)](https://app.codecov.io/gh/adrientaudiere/MiscMetabar)
 [![Contributor
 Covenant](https://img.shields.io/badge/Contributor%20Covenant-2.1-4baaaa.svg)](https://github.com/adrientaudiere/MiscMetabar/blob/master/CODE_OF_CONDUCT.md)
@@ -30,9 +29,9 @@ databases, (iii) high-throughput sequencing (HTS), and (iv)
 bioinformatics resources have enabled the description of biological
 communities through metabarcoding. Metabarcoding involves the sequencing
 of millions (*meta*-) of short regions of specific DNA (*-barcoding*,
-Valentini, Pompanon, and Taberlet (2009)) often from environmental
-samples (eDNA, Taberlet et al. (2012)) such as human stomach contents,
-lake water, soil, and air.
+Valentini et al. (2009)) often from environmental samples (eDNA,
+Taberlet et al. (2012)) such as human stomach contents, lake water,
+soil, and air.
 
 `MiscMetabar` aims to facilitate the **description**,
 **transformation**, **exploration** and **reproducibility** of
@@ -132,8 +131,17 @@ summary_plot_pq(data_fungi)
 ``` r
 p <- MiscMetabar::hill_pq(data_fungi, fact = "Height")
 p$plot_Hill_0
-#> NULL
 ```
+
+<div class="figure">
+
+<img src="man/figures/README-unnamed-chunk-6-1.png" alt="Hill number 0, aka richness are plot in function of the height modality" width="100%" />
+<p class="caption">
+
+Hill number 0
+</p>
+
+</div>
 
 ``` r
 p$plot_tuckey
@@ -153,11 +161,21 @@ ggvenn_pq(data_fungi, fact = "Height") +
 
 <img src="man/figures/README-unnamed-chunk-8-1.png" alt="A venn diagram showing the number of shared ASV and the percentage of shared ASV between the three modality of Height (low, middle and high)." width="100%" />
 
+## I need help, there is a bug, I want a new feature!
+
+Most of the development work on this package has been done on a
+voluntary basis without payment. If you appreciate this work, please
+feel free to use it, cite it in your projects, let me know about any
+bugs you find, and contribute improvements via pull requests. Community
+engagement and collaboration are what make open-source projects thrive.
+Please use github issues if you need help. As a freelancer, I am
+available to work on projects related to this R package.
+
 ### Note for non-Linux users
 
 Some functions may not work on Windows (*e.g.* `track_wkflow()`,
 `cutadapt_remove_primers()`, `krona()`, `vsearch_clustering()`, …). A
-solution is to exploit docker container, for example the using the great
+solution is to exploit docker container, for example using the great
 [rocker project](https://rocker-project.org/).
 
 Here is a list of functions with some limitations or not working at all
@@ -230,8 +248,7 @@ make install  # as root or sudo
 conda create -n cutadaptenv cutadapt
 ```
 
-<div id="refs" class="references csl-bib-body hanging-indent"
-entry-spacing="0">
+<div id="refs" class="references csl-bib-body hanging-indent">
 
 <div id="ref-callahan2016" class="csl-entry">
 
@@ -263,8 +280,9 @@ Data.” *PLoS ONE* 8 (4): e61217.
 <div id="ref-taberlet2012" class="csl-entry">
 
 Taberlet, Pierre, Eric Coissac, Mehrdad Hajibabaei, and Loren H
-Rieseberg. 2012. “Environmental Dna.” *Molecular Ecology*. Wiley Online
-Library. <https://doi.org/10.1002/(issn)2637-4943>.
+Rieseberg. 2012. “Environmental Dna.” In *Molecular Ecology*, No. 8,
+vol. 21. Wiley Online Library.
+<https://doi.org/10.1111/j.1365-294X.2012.05542.x>.
 
 </div>
 

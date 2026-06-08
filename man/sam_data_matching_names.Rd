@@ -37,7 +37,7 @@ Keep a copy of those files somewhere before.}
 
 \item{prefix}{Add a prefix to new samples names (ex. prefix = "samp")}
 
-\item{...}{Other parameters passed on to \code{\link[utils:read.table]{utils::read.csv()}} function.}
+\item{...}{Other parameters passed on to \code{\link[utils:read.csv]{utils::read.csv()}} function.}
 }
 \value{
 A list of two objects :
@@ -54,6 +54,15 @@ A list of two objects :
 
 
 Useful for targets bioinformatic pipeline.
+}
+\examples{
+\dontrun{
+sam_data_matching_names(
+  path_sam_data = "path/to/sample_data.csv",
+  sample_col_name = "SampleID",
+  path_raw_seq = "path/to/fastq_folder/"
+)
+}
 }
 \author{
 Adrien Taudière

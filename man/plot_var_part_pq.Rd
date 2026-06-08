@@ -70,16 +70,21 @@ use this function.
 \examples{
 \donttest{
 if (requireNamespace("vegan")) {
-  data_fungi_woNA <- subset_samples(data_fungi, !is.na(Time) & !is.na(Height))
-  res_var_9 <- var_par_rarperm_pq(
-    data_fungi_woNA,
+  data_fungi_woNA <- subset_samples(
+    data_fungi_mini,
+    !is.na(Time) & !is.na(Height)
+  )
+  res_var0 <- var_par_pq(data_fungi_woNA,
     list_component = list(
       "Time" = c("Time"),
       "Size" = c("Height", "Diameter")
-    ),
-    nperm = 9,
-    dbrda_computation = TRUE
+    )
   )
+  plot_var_part_pq(res_var0)
+}
+}
+\dontrun{
+if (requireNamespace("vegan")) {
   res_var_2 <- var_par_rarperm_pq(
     data_fungi_woNA,
     list_component = list(
@@ -89,18 +94,7 @@ if (requireNamespace("vegan")) {
     nperm = 2,
     dbrda_computation = TRUE
   )
-  res_var0 <- var_par_pq(data_fungi_woNA,
-    list_component = list(
-      "Time" = c("Time"),
-      "Size" = c("Height", "Diameter")
-    ),
-    dbrda_computation = TRUE
-  )
   plot_var_part_pq(res_var0, digits_quantile = 2, show_dbrda_signif = TRUE)
-  plot_var_part_pq(res_var_9,
-    digits_quantile = 2, show_quantiles = TRUE,
-    show_dbrda_signif = TRUE
-  )
   plot_var_part_pq(
     res_var_2,
     digits = 5,

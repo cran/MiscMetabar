@@ -8,7 +8,7 @@ lulu_pq(
   physeq,
   nproc = 1,
   id = 0.84,
-  vsearchpath = "vsearch",
+  vsearchpath = find_vsearch(),
   verbose = FALSE,
   clean_pq = FALSE,
   keep_temporary_files = FALSE,
@@ -66,7 +66,11 @@ from \url{https://github.com/tobiasgf/lulu}
 \examples{
 \dontshow{if (MiscMetabar::is_vsearch_installed()) withAutoprint(\{ # examplesIf}
 \donttest{
-lulu_pq(data_fungi_sp_known)
+data_f <- clean_pq(prune_samples(
+  sample_names(data_fungi_sp_known)[1:20],
+  data_fungi_sp_known
+))
+lulu_pq(data_f)
 }
 \dontshow{\}) # examplesIf}
 }

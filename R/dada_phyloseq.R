@@ -20,7 +20,14 @@ if (getRversion() >= "2.15.1") {
 #'   taxa names
 #' @author Adrien Taudière
 #' @export
-
+#' @examples
+#' pq_seq_names <- phyloseq::phyloseq(
+#'   phyloseq::otu_table(data_fungi_mini),
+#'   phyloseq::sample_data(data_fungi_mini),
+#'   phyloseq::tax_table(data_fungi_mini)
+#' )
+#' phyloseq::taxa_names(pq_seq_names) <- as.character(phyloseq::refseq(data_fungi_mini))
+#' add_dna_to_phyloseq(pq_seq_names)
 add_dna_to_phyloseq <- function(physeq, prefix_taxa_names = "Taxa_") {
   verify_pq(physeq)
   dna <- Biostrings::DNAStringSet(phyloseq::taxa_names(physeq))
@@ -31,8 +38,6 @@ add_dna_to_phyloseq <- function(physeq, prefix_taxa_names = "Taxa_") {
   return(physeq)
 }
 ################################################################################
-
-
 
 ################################################################################
 #'  Clean phyloseq object by removing empty samples and taxa
@@ -62,28 +67,70 @@ add_dna_to_phyloseq <- function(physeq, prefix_taxa_names = "Taxa_") {
 #'   transpose the otu_table and set taxa_are_rows to true
 #' @param reorder_taxa (logical) if TRUE the otu_table is ordered by the number of
 #'   sequences of taxa (ASV, OTU) in descending order. Default to FALSE.
-#' @param rename_taxa (logical) if TRUE, taxa (ASV, OTU) are renamed by their position
-#'   in the OTU_table and prefix_taxa_names param (by default: Taxa_1, Taxa_2, ...).
+#' @param rename_taxa (logical, default FALSE) if TRUE, taxa (ASV, OTU) are renamed by their position
+#'   in the OTU_table and prefix_taxa_names param (Taxa_1, Taxa_2, ...).
 #'   Default to FALSE. If rename taxa (ASV, OTU) is true,
 #'   the taxa (ASV, OTU) names in verbose information can be misleading.
 #' @param simplify_taxo (logical) if TRUE, correct the taxonomy_table using the
 #'   `MiscMetabar::simplify_taxo()` function
 #' @param prefix_taxa_names (default "Taxa_"): the prefix of taxa names (eg. "ASV_" or "OTU_")
+#' @param check_taxonomy (logical, default FALSE) If TRUE, call
+#'   [verify_tax_table()] to check for common taxonomy table issues.
+#' @param tax_remove_border_spaces (logical, default FALSE) If TRUE, trim
+#'   leading/trailing whitespace from values in the `tax_table` slot
+#'   (passed to [verify_tax_table()] with `modify_phyloseq = TRUE`). Handles
+#'   both ASCII whitespace and Unicode separators such as NBSP (U+00A0).
+#' @param tax_remove_all_space (logical, default FALSE) If TRUE, replace
+#'   internal whitespace (ASCII or Unicode separator) in `tax_table` values
+#'   with `replace_space_with`.
+#' @param tax_replace_invisible_chars (logical, default FALSE) If TRUE,
+#'   strip invisible / unusual characters (control chars, zero-width space,
+#'   NBSP inside values, ...) from `tax_table` values. See
+#'   [verify_tax_table()]'s `replace_invisible_chars` for the exact pattern.
+#' @param tax_replace_to_NA (logical or character, default FALSE) If TRUE,
+#'   replace `tax_table` values matching the default [unwanted_tax_patterns]
+#'   with `NA`. A character vector of regex patterns can be supplied to
+#'   override the defaults.
+#' @param tax_redundant_suffix (logical or character, default FALSE) If TRUE,
+#'   replace redundant `"_sp"` values with `NA` (e.g. `Russula_sp` at Species
+#'   when `Russula` is already at Genus). A character string supplies a
+#'   custom suffix.
+#' @param tax_replace_space_with (character, default `"_"`) Replacement for
+#'   internal whitespace when `tax_remove_all_space = TRUE`.
 #' @return A new \code{\link[phyloseq]{phyloseq-class}} object
 #' @export
 #' @author Adrien Taudière
-clean_pq <- function(physeq,
-                     remove_empty_samples = TRUE,
-                     remove_empty_taxa = TRUE,
-                     clean_samples_names = TRUE,
-                     silent = FALSE,
-                     verbose = FALSE,
-                     force_taxa_as_columns = FALSE,
-                     force_taxa_as_rows = FALSE,
-                     reorder_taxa = FALSE,
-                     rename_taxa = FALSE,
-                     simplify_taxo = FALSE,
-                     prefix_taxa_names = "_Taxa") {
+#' @examples
+#' clean_pq(data_fungi_mini)
+#' \donttest{
+#' # Trim leading/trailing whitespace in tax_table values
+#' clean_pq(data_fungi_mini, tax_remove_border_spaces = TRUE)
+#' # Replace NA-like values (e.g. "unidentified", "NA") with NA
+#' clean_pq(data_fungi_mini, tax_replace_to_NA = TRUE)
+#' # Drop redundant "_sp" tips
+#' clean_pq(data_fungi_mini, tax_redundant_suffix = TRUE)
+#' }
+clean_pq <- function(
+  physeq,
+  remove_empty_samples = TRUE,
+  remove_empty_taxa = TRUE,
+  clean_samples_names = TRUE,
+  silent = FALSE,
+  verbose = FALSE,
+  force_taxa_as_columns = FALSE,
+  force_taxa_as_rows = FALSE,
+  reorder_taxa = FALSE,
+  rename_taxa = FALSE,
+  simplify_taxo = FALSE,
+  prefix_taxa_names = "_Taxa",
+  check_taxonomy = FALSE,
+  tax_remove_border_spaces = FALSE,
+  tax_remove_all_space = FALSE,
+  tax_replace_to_NA = FALSE,
+  tax_redundant_suffix = FALSE,
+  tax_replace_space_with = "_",
+  tax_replace_invisible_chars = FALSE
+) {
   if (clean_samples_names) {
     if (!is.null(physeq@refseq)) {
       if (sum(!names(physeq@refseq) %in% taxa_names(physeq)) > 0) {
@@ -115,7 +162,10 @@ clean_pq <- function(physeq,
   verify_pq(physeq)
 
   if (reorder_taxa) {
-    physeq <- reorder_taxa_pq(physeq, taxa_names(physeq)[order(taxa_sums(physeq), decreasing = TRUE)])
+    physeq <- reorder_taxa_pq(
+      physeq,
+      taxa_names(physeq)[order(taxa_sums(physeq), decreasing = TRUE)]
+    )
   }
 
   if (rename_taxa) {
@@ -136,17 +186,23 @@ clean_pq <- function(physeq,
 
   if (force_taxa_as_columns && taxa_are_rows(physeq)) {
     otu_table(physeq) <-
-      otu_table(t(as.matrix(unclass(
-        physeq@otu_table
-      ))), taxa_are_rows = FALSE)
+      otu_table(
+        t(as.matrix(unclass(
+          physeq@otu_table
+        ))),
+        taxa_are_rows = FALSE
+      )
     message("Taxa are now in columns.")
   }
 
   if (force_taxa_as_rows && !taxa_are_rows(physeq)) {
     otu_table(physeq) <-
-      otu_table(t(as.matrix(unclass(
-        physeq@otu_table
-      ))), taxa_are_rows = TRUE)
+      otu_table(
+        t(as.matrix(unclass(
+          physeq@otu_table
+        ))),
+        taxa_are_rows = TRUE
+      )
     message("Taxa are now in rows.")
   }
 
@@ -158,12 +214,12 @@ clean_pq <- function(physeq,
 
   if (remove_empty_taxa) {
     if (sum(taxa_sums(new_physeq) != 0) > 0) {
-      new_physeq <- subset_taxa(physeq, taxa_sums(physeq) > 0)
+      new_physeq <- prune_taxa(taxa_sums(physeq) > 0, physeq)
     }
   }
   if (remove_empty_samples) {
     if (sum(sample_sums(new_physeq) != 0) > 0) {
-      new_physeq <- subset_samples(new_physeq, sample_sums(physeq) > 0)
+      new_physeq <- prune_samples(sample_sums(new_physeq) > 0, new_physeq)
     }
   }
 
@@ -182,8 +238,10 @@ clean_pq <- function(physeq,
       )
     )
   } else if (!silent) {
-    if (ntaxa(physeq) - ntaxa(new_physeq) != 0 ||
-      nsamples(physeq) - nsamples(new_physeq) != 0) {
+    if (
+      ntaxa(physeq) - ntaxa(new_physeq) != 0 ||
+        nsamples(physeq) - nsamples(new_physeq) != 0
+    ) {
       message(
         paste(
           "Cleaning suppress",
@@ -196,13 +254,45 @@ clean_pq <- function(physeq,
     }
   }
 
-  verify_pq(new_physeq)
+  do_tax_modif <- isTRUE(tax_remove_border_spaces) ||
+    isTRUE(tax_remove_all_space) ||
+    !isFALSE(tax_replace_to_NA) ||
+    !isFALSE(tax_redundant_suffix) ||
+    isTRUE(tax_replace_invisible_chars)
+
+  if (do_tax_modif && !is.null(new_physeq@tax_table)) {
+    patterns_arg <- if (isTRUE(tax_replace_to_NA)) {
+      unwanted_tax_patterns
+    } else if (isFALSE(tax_replace_to_NA)) {
+      character(0)
+    } else {
+      tax_replace_to_NA
+    }
+    suffix_arg <- if (isTRUE(tax_redundant_suffix)) {
+      "_sp"
+    } else if (isFALSE(tax_redundant_suffix)) {
+      NULL
+    } else {
+      tax_redundant_suffix
+    }
+    new_physeq <- verify_tax_table(
+      new_physeq,
+      verbose = verbose,
+      modify_phyloseq = TRUE,
+      replace_to_NA = patterns_arg,
+      min_char = 0,
+      redundant_suffix = suffix_arg,
+      remove_border_spaces = isTRUE(tax_remove_border_spaces),
+      remove_all_space = isTRUE(tax_remove_all_space),
+      replace_space_with = tax_replace_space_with,
+      detect_invisible_chars = isTRUE(tax_replace_invisible_chars),
+      replace_invisible_chars = isTRUE(tax_replace_invisible_chars)
+    )
+  }
+
+  verify_pq(new_physeq, check_taxonomy = check_taxonomy)
   return(new_physeq)
 }
-
-
-
-
 
 
 ################################################################################
@@ -242,21 +332,23 @@ clean_pq <- function(physeq,
 #' @examplesIf tolower(Sys.info()[["sysname"]]) != "windows"
 #' data(enterotype)
 #' if (requireNamespace("pbapply")) {
-#'   track_wkflow(list(data_fungi, enterotype), taxonomy_rank = c(3, 5))
+#'   track_wkflow(list(data_fungi_mini, enterotype), taxonomy_rank = c(3, 5))
 #'   track_wkflow(list(
-#'     "data FUNGI" = data_fungi,
+#'     "data FUNGI" = data_fungi_mini,
 #'     "fastq files forward" =
 #'       unlist(list_fastq_files(system.file("extdata", package = "MiscMetabar"),
 #'         paired_end = FALSE
 #'       ))
 #'   ))
 #' }
-track_wkflow <- function(list_of_objects,
-                         obj_names = NULL,
-                         clean_pq = FALSE,
-                         taxonomy_rank = NULL,
-                         verbose = TRUE,
-                         ...) {
+track_wkflow <- function(
+  list_of_objects,
+  obj_names = NULL,
+  clean_pq = FALSE,
+  taxonomy_rank = NULL,
+  verbose = TRUE,
+  ...
+) {
   if (verbose) {
     message("Compute the number of sequences")
   }
@@ -281,16 +373,24 @@ track_wkflow <- function(list_of_objects,
         sum(object@otu_table)
       } else if (inherits(object, "matrix")) {
         sum(object, na.rm = TRUE)
-      } else if (is.character(object[1]) &&
-        length(object[1]) == 1 &&
-        file.exists(object[1])) {
+      } else if (
+        is.character(object[1]) &&
+          length(object[1]) == 1 &&
+          file.exists(object[1])
+      ) {
         if (summary(file(object[[1]]))$class == "gzfile") {
           pbapply::pbsapply(object, function(x) {
-            as.numeric(system(paste("zcat ", x, " | grep -c '^+$'", sep = ""), intern = TRUE))
+            as.numeric(system(
+              paste("zcat ", x, " | grep -c '^+$'", sep = ""),
+              intern = TRUE
+            ))
           })
         } else if (grepl("\\.fastq$", object[1])) {
           pbapply::pbsapply(object, function(x) {
-            as.numeric(system(paste("cat ", x, " | grep -c '^+$'", sep = ""), intern = TRUE))
+            as.numeric(system(
+              paste("cat ", x, " | grep -c '^+$'", sep = ""),
+              intern = TRUE
+            ))
           })
         } else {
           stop("Files must be either gzfile or .fastq")
@@ -322,8 +422,10 @@ track_wkflow <- function(list_of_objects,
         length(object$sequence)
       } else if (inherits(object[[1]], "dada")) {
         dim(suppressMessages(dada2::makeSequenceTable(object)))[2]
-      } else if (is.data.frame(object[[1]]) &&
-        all(c("sequence", "abundance") %in% colnames(object[[1]]))) {
+      } else if (
+        is.data.frame(object[[1]]) &&
+          all(c("sequence", "abundance") %in% colnames(object[[1]]))
+      ) {
         dim(suppressMessages(dada2::makeSequenceTable(object)))[2]
       } else if (inherits(object, "derep")) {
         length(unique(names(object$uniques)))
@@ -350,16 +452,20 @@ track_wkflow <- function(list_of_objects,
         1
       } else if (inherits(object[[1]], "dada")) {
         dim(suppressMessages(dada2::makeSequenceTable(object)))[1]
-      } else if (is.data.frame(object[[1]]) &&
-        all(c("sequence", "abundance") %in% colnames(object[[1]]))) {
+      } else if (
+        is.data.frame(object[[1]]) &&
+          all(c("sequence", "abundance") %in% colnames(object[[1]]))
+      ) {
         dim(suppressMessages(dada2::makeSequenceTable(object)))[1]
       } else if (inherits(object, "derep")) {
         1
       } else if (inherits(object[[1]], "derep")) {
         length(object)
-      } else if (is.character(object[1]) &&
-        length(object[1]) == 1 &&
-        file.exists(object[1])) {
+      } else if (
+        is.character(object[1]) &&
+          length(object[1]) == 1 &&
+          file.exists(object[1])
+      ) {
         length(object)
       } else {
         NA
@@ -433,7 +539,6 @@ track_wkflow <- function(list_of_objects,
     rownames(track) <- c("nb_sequences", "nb_clusters", "nb_samples")
   }
 
-
   track <- as.data.frame(t(track))
   if (!is.null(obj_names)) {
     rownames(track) <- obj_names
@@ -454,11 +559,17 @@ track_wkflow <- function(list_of_objects,
 #' <a href="https://adrientaudiere.github.io/MiscMetabar/articles/Rules.html#lifecycle">
 #' <img src="https://img.shields.io/badge/lifecycle-experimental-orange" alt="lifecycle-experimental"></a>
 #'
-#' Contrary to [track_wkflow()], only phyloseq object are possible.
+#' Accept all input types supported by [track_wkflow()]: phyloseq objects,
+#' matrices (samples x clusters), dada-class, derep-class, lists of
+#' dada-class or derep-class, and character vectors of fastq/fastq.gz file
+#' paths.
 #' More information are available in the manual of the function [track_wkflow()]
 #'
-#' @param list_pq_obj (required) a list of object passed on to [track_wkflow()]
-#'   Only phyloseq object will return value because information of sample is needed
+#' @param list_of_objects (required) a list of objects passed on to
+#'   [track_wkflow()]. Accepts phyloseq, matrix, dada-class, derep-class,
+#'   lists of dada-class or derep-class, and character vectors of file paths.
+#' @param output_data_frame (logical, default FALSE) If TRUE, the function returns a
+#'  data frame with the number of sequences, clusters and samples for each sample.
 #' @param ... Other args passed on to [track_wkflow()]
 #'
 #' @return A list of dataframe. cf [track_wkflow()] for more information
@@ -471,33 +582,106 @@ track_wkflow <- function(list_of_objects,
 #' if (requireNamespace("pbapply")) {
 #'   track_wkflow_samples(tree_A10_005)
 #' }
-track_wkflow_samples <- function(list_pq_obj, ...) {
-  if (!inherits(list_pq_obj, "list")) {
-    list_pq_obj <- list(list_pq_obj)
+track_wkflow_samples <- function(
+  list_of_objects,
+  output_data_frame = FALSE,
+  ...
+) {
+  if (!inherits(list_of_objects, "list")) {
+    list_of_objects <- list(list_of_objects)
   }
-  if (sum(!unlist(lapply(list_pq_obj, inherits, "phyloseq"))) != 0) {
-    stop("At least one object in your list_pq_obj is not a phyloseq obj.")
+
+  get_sample_names_from_object <- function(object, obj_name = NULL) {
+    if (inherits(object, "phyloseq")) {
+      sample_names(object)
+    } else if (inherits(object, "matrix")) {
+      rownames(object)
+    } else if (inherits(object, "dada")) {
+      obj_name
+    } else if (inherits(object, "derep")) {
+      obj_name
+    } else if (
+      is.list(object) &&
+        length(object) > 0 &&
+        (inherits(object[[1]], "dada") || inherits(object[[1]], "derep"))
+    ) {
+      names(object)
+    } else if (is.character(object)) {
+      if (!is.null(names(object))) {
+        names(object)
+      } else {
+        basename(object)
+      }
+    } else {
+      obj_name
+    }
   }
-  sam_names <- unique(unlist(lapply(list_pq_obj, sample_names)))
+
+  subset_object_to_sample <- function(object, s) {
+    if (inherits(object, "phyloseq")) {
+      if (s %in% sample_names(object)) {
+        select_one_sample(object, sam_name = s)
+      } else {
+        matrix(0, nrow = 0, ncol = 0)
+      }
+    } else if (inherits(object, "matrix")) {
+      if (s %in% rownames(object)) {
+        object[s, , drop = FALSE]
+      } else {
+        matrix(0, nrow = 0, ncol = 0)
+      }
+    } else if (inherits(object, "dada") || inherits(object, "derep")) {
+      object
+    } else if (
+      is.list(object) &&
+        length(object) > 0 &&
+        (inherits(object[[1]], "dada") || inherits(object[[1]], "derep"))
+    ) {
+      if (s %in% names(object)) {
+        object[[s]]
+      } else {
+        matrix(0, nrow = 0, ncol = 0)
+      }
+    } else if (is.character(object)) {
+      sample_id <- if (!is.null(names(object))) {
+        names(object)
+      } else {
+        basename(object)
+      }
+      idx <- which(sample_id == s)
+      if (length(idx) > 0) {
+        object[idx]
+      } else {
+        matrix(0, nrow = 0, ncol = 0)
+      }
+    } else {
+      matrix(0, nrow = 0, ncol = 0)
+    }
+  }
+
+  sam_names <- unique(unlist(lapply(seq_along(list_of_objects), function(i) {
+    obj_name <- names(list_of_objects)[i]
+    if (is.null(obj_name)) {
+      obj_name <- as.character(i)
+    }
+    get_sample_names_from_object(list_of_objects[[i]], obj_name)
+  })))
+
   res <- vector("list", length(sam_names))
   names(res) <- sam_names
   for (s in sam_names) {
-    list_pq_obj_samples <-
-      lapply(list_pq_obj, function(physeq) {
-        if (sum(sample_names(physeq) %in% s) == 1) {
-          select_one_sample(physeq, sam_name = s)
-        } else {
-          matrix(0, nrow = 0, ncol = 0)
-        }
+    list_obj_samples <-
+      lapply(list_of_objects, function(object) {
+        subset_object_to_sample(object, s)
       })
-    res[[s]] <- track_wkflow(list_pq_obj_samples) # ,...)
+    res[[s]] <- track_wkflow(list_obj_samples, ...)
+  }
+  if (output_data_frame) {
+    res <- do.call(rbind, res)
   }
   return(res)
 }
 ###########################################################################
-
-
-
 
 ################################################################################
 #' Recluster sequences of an object of class `physeq`
@@ -522,7 +706,9 @@ track_wkflow_samples <- function(list_pq_obj, ...) {
 #'   - `vsearch` use the vsearch software (https://github.com/torognes/vsearch)
 #'     with arguments `--cluster_size` by default (see args `vsearch_cluster_method`)
 #'     and `-strand both` (see args `vsearch_args`)
-#'   - `swarm` use the swarm
+#'   - `swarm` use the swarm software (https://github.com/torognes/swarm)
+#'   - `mmseqs2` use the MMseqs2 software (https://github.com/soedinglab/MMseqs2)
+#'     with `easy-cluster` by default (see args `mmseqs2_cluster_method`)
 #' @param vsearchpath (default: vsearch) path to vsearch
 #' @param id (default: 0.97) level of identity to cluster
 #' @param tax_adjust (Default 0) See the man page
@@ -530,12 +716,13 @@ track_wkflow_samples <- function(list_pq_obj, ...) {
 #'   To conserved the taxonomic rank of the most abundant taxa (ASV, OTU,...),
 #'   set tax_adjust to 0 (default). For the moment only tax_adjust = 0 is
 #'   robust
+#' @param rank_propagation (logical, default FALSE). Do we propagate the
+#' NA value from lower taxonomic rank to upper rank?
+#' See the man page of [merge_taxa_vec()] for more details.
 #' @param vsearch_cluster_method (default: "--cluster_size) See other possible
-#'   methods in the [vsearch manual](https://github.com/torognes/vsearch/) (e.g. `--cluster_size` or `--cluster_smallmem`)
+#'   methods in the [vsearch manual](https://github.com/torognes/vsearch/) (e.g. `--cluster_size` or `--cluster_fast`)
 #'   - `--cluster_fast` : Clusterize the fasta sequences in filename, automatically sort by decreasing sequence length beforehand.
 #'   - `--cluster_size` : Clusterize the fasta sequences in filename, automatically sort by decreasing sequence abundance beforehand.
-#'   - `--cluster_smallmem` : Clusterize the fasta sequences in filename without automatically modifying their order beforehand. Sequence are expected to be sorted by decreasing sequence length, unless *--usersort* is used.
-#'     In that case you may set `vsearch_args` to vsearch_args = "--strand both --usersort"
 #' @param vsearch_args (default : "--strand both") a one length character element defining other parameters to
 #'   passed on to vsearch.
 #' @param keep_temporary_files (logical, default: FALSE) Do we keep temporary files
@@ -549,6 +736,11 @@ track_wkflow_samples <- function(list_pq_obj, ...) {
 #' @param swarm_args (default : "--fastidious") a one length character
 #'   element defining other parameters to  passed on to swarm See other possible
 #'   methods in the [SWARM pdf manual](https://github.com/torognes/swarm/blob/master/man/swarm_manual.pdf)
+#' @param mmseqs2path (default: [find_mmseqs2()]) path to MMseqs2
+#' @param mmseqs2_cluster_method (default: `"easy-cluster"`) Either
+#'   `"easy-cluster"` or `"easy-linclust"`. See [mmseqs2_clustering()].
+#' @param mmseqs2_args (default: `""`) Additional arguments passed to the
+#'   MMseqs2 clustering command.
 #' @param method_clusterize (default "overlap") the method for the [DECIPHER::Clusterize()] method
 #' @param ... Additional arguments passed on to [DECIPHER::Clusterize()]
 #' @details This function use the `merge_taxa_vec` function to
@@ -559,10 +751,12 @@ track_wkflow_samples <- function(list_pq_obj, ...) {
 #'   args was used.
 #'
 #' @examples
+#' \donttest{
 #' if (requireNamespace("DECIPHER")) {
 #'   postcluster_pq(data_fungi_mini)
 #' }
-#' \donttest{
+#' }
+#' \dontrun{
 #' if (requireNamespace("DECIPHER")) {
 #'   postcluster_pq(data_fungi_mini, method_clusterize = "longest")
 #'
@@ -572,6 +766,9 @@ track_wkflow_samples <- function(list_pq_obj, ...) {
 #'   if (MiscMetabar::is_vsearch_installed()) {
 #'     d_vs <- postcluster_pq(data_fungi_mini, method = "vsearch")
 #'   }
+#'   if (MiscMetabar::is_mmseqs2_installed()) {
+#'     d_mm <- postcluster_pq(data_fungi_mini, method = "mmseqs2")
+#'   }
 #' }
 #' }
 #' @references
@@ -579,25 +776,32 @@ track_wkflow_samples <- function(list_pq_obj, ...) {
 #'   \url{https://github.com/torognes/vsearch}.
 #'   More information in the associated publication
 #'   \url{https://pubmed.ncbi.nlm.nih.gov/27781170}.
-#' @seealso [vsearch_clustering()] and [swarm_clustering()]
+#' @seealso [vsearch_clustering()], [swarm_clustering()],
+#'   and [mmseqs2_clustering()]
 #' @export
 #' @author Adrien Taudière
 
-postcluster_pq <- function(physeq = NULL,
-                           dna_seq = NULL,
-                           nproc = 1,
-                           method = "clusterize",
-                           id = 0.97,
-                           vsearchpath = "vsearch",
-                           tax_adjust = 0,
-                           vsearch_cluster_method = "--cluster_size",
-                           vsearch_args = "--strand both",
-                           keep_temporary_files = FALSE,
-                           swarmpath = "swarm",
-                           d = 1,
-                           swarm_args = "--fastidious",
-                           method_clusterize = "overlap",
-                           ...) {
+postcluster_pq <- function(
+  physeq = NULL,
+  dna_seq = NULL,
+  nproc = 1,
+  method = "clusterize",
+  id = 0.97,
+  vsearchpath = find_vsearch(),
+  tax_adjust = 0,
+  rank_propagation = FALSE,
+  vsearch_cluster_method = "--cluster_size",
+  vsearch_args = "--strand both",
+  keep_temporary_files = FALSE,
+  swarmpath = "swarm",
+  d = 1,
+  swarm_args = "--fastidious",
+  mmseqs2path = find_mmseqs2(),
+  mmseqs2_cluster_method = "easy-cluster",
+  mmseqs2_args = "",
+  method_clusterize = "overlap",
+  ...
+) {
   if (inherits(physeq, "phyloseq")) {
     verify_pq(physeq)
     if (is.null(physeq@refseq)) {
@@ -629,7 +833,12 @@ postcluster_pq <- function(physeq = NULL,
 
     if (inherits(physeq, "phyloseq")) {
       new_obj <-
-        merge_taxa_vec(physeq, clusters$cluster, tax_adjust = tax_adjust)
+        merge_taxa_vec(
+          physeq,
+          clusters$cluster,
+          tax_adjust = tax_adjust,
+          rank_propagation = rank_propagation
+        )
     } else if (inherits(dna_seq, "character")) {
       new_obj <- clusters
     } else {
@@ -646,6 +855,7 @@ postcluster_pq <- function(physeq = NULL,
       id = id,
       vsearchpath = vsearchpath,
       tax_adjust = tax_adjust,
+      rank_propagation = rank_propagation,
       vsearch_cluster_method = vsearch_cluster_method,
       vsearch_args = vsearch_args,
       keep_temporary_files = keep_temporary_files
@@ -660,24 +870,36 @@ postcluster_pq <- function(physeq = NULL,
       nproc = nproc,
       swarm_args = swarm_args,
       tax_adjust = tax_adjust,
+      rank_propagation = rank_propagation,
+      keep_temporary_files = keep_temporary_files
+    )
+  } else if (method == "mmseqs2") {
+    new_obj <- mmseqs2_clustering(
+      physeq = physeq,
+      dna_seq = dna_seq,
+      nproc = nproc,
+      id = id,
+      mmseqs2path = mmseqs2path,
+      tax_adjust = tax_adjust,
+      rank_propagation = rank_propagation,
+      mmseqs2_cluster_method = mmseqs2_cluster_method,
+      mmseqs2_args = mmseqs2_args,
       keep_temporary_files = keep_temporary_files
     )
   } else {
-    stop("Method allows 2 values only : `clusterize`, `vsearch` or `swarm`")
+    stop(
+      "Method must be one of: `clusterize`, `vsearch`, `swarm` or `mmseqs2`"
+    )
   }
   return(new_obj)
 }
 ################################################################################
-
-
 
 ################################################################################
 #' @rdname postcluster_pq
 #' @export
 asv2otu <- postcluster_pq
 ################################################################################
-
-
 
 ################################################################################
 #' Save phyloseq object in the form of multiple csv tables.
@@ -722,23 +944,25 @@ asv2otu <- postcluster_pq
 #' unlink(paste0(tempdir(), "/phyloseq"), recursive = TRUE)
 #' @seealso [MiscMetabar::save_pq()]
 
-write_pq <- function(physeq,
-                     path = NULL,
-                     rdata = FALSE,
-                     one_file = FALSE,
-                     write_sam_data = TRUE,
-                     sam_data_first = FALSE,
-                     clean_pq = TRUE,
-                     reorder_taxa = FALSE,
-                     rename_taxa = FALSE,
-                     remove_empty_samples = TRUE,
-                     remove_empty_taxa = TRUE,
-                     clean_samples_names = TRUE,
-                     silent = FALSE,
-                     verbose = FALSE,
-                     quote = FALSE,
-                     sep_csv = "\t",
-                     ...) {
+write_pq <- function(
+  physeq,
+  path = NULL,
+  rdata = FALSE,
+  one_file = FALSE,
+  write_sam_data = TRUE,
+  sam_data_first = FALSE,
+  clean_pq = TRUE,
+  reorder_taxa = FALSE,
+  rename_taxa = FALSE,
+  remove_empty_samples = TRUE,
+  remove_empty_taxa = TRUE,
+  clean_samples_names = TRUE,
+  silent = FALSE,
+  verbose = FALSE,
+  quote = FALSE,
+  sep_csv = "\t",
+  ...
+) {
   verify_pq(physeq)
 
   physeq <- clean_pq(
@@ -756,18 +980,24 @@ write_pq <- function(physeq,
     dir.create(file.path(path), recursive = TRUE)
   }
   if (one_file) {
-    if (!is.null(physeq@refseq) &&
-      !is.null(physeq@otu_table) && !is.null(physeq@tax_table)) {
+    if (
+      !is.null(physeq@refseq) &&
+        !is.null(physeq@otu_table) &&
+        !is.null(physeq@tax_table)
+    ) {
       if (!taxa_are_rows(physeq)) {
         otu_table(physeq) <-
-          otu_table(t(as.matrix(unclass(
-            physeq@otu_table
-          ))), taxa_are_rows = TRUE)
+          otu_table(
+            t(as.matrix(unclass(
+              physeq@otu_table
+            ))),
+            taxa_are_rows = TRUE
+          )
       }
       df_physeq_interm <- cbind(
         physeq@otu_table,
         physeq@tax_table,
-        as.vector(physeq@refseq)
+        as.character(physeq@refseq)
       )
       colnames(df_physeq_interm) <-
         c(
@@ -800,15 +1030,21 @@ write_pq <- function(physeq,
         paste0(path, "/ASV_table_allInOne.csv"),
         quote = quote,
         sep = sep_csv,
+        col.names = NA,
         ...
       )
-    } else if (!is.null(physeq@otu_table) &&
-      !is.null(physeq@tax_table)) {
+    } else if (
+      !is.null(physeq@otu_table) &&
+        !is.null(physeq@tax_table)
+    ) {
       if (!taxa_are_rows(physeq)) {
         otu_table(physeq) <-
-          otu_table(t(as.matrix(unclass(
-            physeq@otu_table
-          ))), taxa_are_rows = TRUE)
+          otu_table(
+            t(as.matrix(unclass(
+              physeq@otu_table
+            ))),
+            taxa_are_rows = TRUE
+          )
       }
       df_physeq_interm <- cbind(physeq@otu_table, physeq@tax_table, )
       colnames(df_physeq_interm) <-
@@ -840,6 +1076,7 @@ write_pq <- function(physeq,
         paste0(path, "/ASV_table_allInOne.csv"),
         quote = quote,
         sep = sep_csv,
+        col.names = NA,
         ...
       )
     }
@@ -855,7 +1092,7 @@ write_pq <- function(physeq,
     }
     if (!is.null(physeq@refseq)) {
       utils::write.table(
-        physeq@refseq,
+        as.character(physeq@refseq),
         paste0(path, "/refseq.csv"),
         quote = quote,
         sep = sep_csv,
@@ -892,7 +1129,6 @@ write_pq <- function(physeq,
 }
 ################################################################################
 
-
 ################################################################################
 #' A wrapper of write_pq to save in all three possible formats
 #'
@@ -919,18 +1155,8 @@ write_pq <- function(physeq,
 #' unlink(paste0(tempdir(), "/phyloseq"), recursive = TRUE)
 #' @seealso [MiscMetabar::write_pq()]
 save_pq <- function(physeq, path = NULL, ...) {
-  write_pq(physeq,
-    path = path,
-    rdata = TRUE,
-    one_file = TRUE,
-    ...
-  )
-  write_pq(physeq,
-    path = path,
-    rdata = FALSE,
-    one_file = FALSE,
-    ...
-  )
+  write_pq(physeq, path = path, rdata = TRUE, one_file = TRUE, ...)
+  write_pq(physeq, path = path, rdata = FALSE, one_file = FALSE, ...)
 }
 
 ################################################################################
@@ -959,15 +1185,20 @@ save_pq <- function(physeq, path = NULL, ...) {
 #' write_pq(data_fungi, path = paste0(tempdir(), "/phyloseq"))
 #' read_pq(path = paste0(tempdir(), "/phyloseq"))
 #' unlink(paste0(tempdir(), "/phyloseq"), recursive = TRUE)
-read_pq <- function(path = NULL,
-                    taxa_are_rows = FALSE,
-                    sam_names = NULL,
-                    sep_csv = "\t",
-                    ...) {
+read_pq <- function(
+  path = NULL,
+  taxa_are_rows = FALSE,
+  sam_names = NULL,
+  sep_csv = "\t",
+  ...
+) {
   if (file.exists(paste0(path, "/otu_table.csv"))) {
     if (taxa_are_rows) {
       otu_table_csv <-
-        as.matrix(utils::read.table(paste0(path, "/otu_table.csv"), sep = sep_csv))
+        as.matrix(utils::read.table(
+          paste0(path, "/otu_table.csv"),
+          sep = sep_csv
+        ))
       samp_names <- colnames(otu_table_csv)
       otu_table_csv <- apply(otu_table_csv, 2, as.numeric)
       table_otu <- otu_table(otu_table_csv, taxa_are_rows = TRUE)
@@ -975,7 +1206,10 @@ read_pq <- function(path = NULL,
       physeq <- phyloseq(table_otu)
     } else {
       otu_table_csv <-
-        as.matrix(utils::read.table(paste0(path, "/otu_table.csv"), sep = sep_csv))
+        as.matrix(utils::read.table(
+          paste0(path, "/otu_table.csv"),
+          sep = sep_csv
+        ))
       samp_names <- rownames(otu_table_csv)
       otu_table_csv <- apply(otu_table_csv, 2, as.numeric)
       rownames(otu_table_csv) <- samp_names
@@ -991,7 +1225,8 @@ read_pq <- function(path = NULL,
         row.names = NULL
       )[, 2])
     names(dna) <-
-      utils::read.table(paste0(path, "/refseq.csv"),
+      utils::read.table(
+        paste0(path, "/refseq.csv"),
         sep = sep_csv,
         row.names = NULL
       )[, 1]
@@ -1062,7 +1297,11 @@ read_pq <- function(path = NULL,
 #' @seealso [mumu_pq()]
 #' @examplesIf MiscMetabar::is_vsearch_installed()
 #' \donttest{
-#' lulu_pq(data_fungi_sp_known)
+#' data_f <- clean_pq(prune_samples(
+#'   sample_names(data_fungi_sp_known)[1:20],
+#'   data_fungi_sp_known
+#' ))
+#' lulu_pq(data_f)
 #' }
 #' @author Tobias Guldberg Frøslev \email{tobiasgf@snm.ku.dk}
 #'   & Adrien Taudière \email{adrien.taudiere@@zaclys.net}
@@ -1075,14 +1314,16 @@ read_pq <- function(path = NULL,
 #' - VSEARCH can be downloaded from
 #'  \url{https://github.com/torognes/vsearch}.
 
-lulu_pq <- function(physeq,
-                    nproc = 1,
-                    id = 0.84,
-                    vsearchpath = "vsearch",
-                    verbose = FALSE,
-                    clean_pq = FALSE,
-                    keep_temporary_files = FALSE,
-                    ...) {
+lulu_pq <- function(
+  physeq,
+  nproc = 1,
+  id = 0.84,
+  vsearchpath = find_vsearch(),
+  verbose = FALSE,
+  clean_pq = FALSE,
+  keep_temporary_files = FALSE,
+  ...
+) {
   verify_pq(physeq)
   if (is.null(physeq@refseq)) {
     stop("The phyloseq object do not contain a @refseq slot")
@@ -1091,41 +1332,49 @@ lulu_pq <- function(physeq,
     physeq <- clean_pq(physeq)
   }
 
+  temp_fasta <- paste0(tempdir(), "/temp.fasta")
+  match_list_file <- paste0(tempdir(), "/match_list.txt")
+
   message("Start Vsearch usearch_global")
   dna <- Biostrings::DNAStringSet(physeq@refseq)
-  Biostrings::writeXStringSet(dna, "temp.fasta")
+  Biostrings::writeXStringSet(dna, temp_fasta)
   system2(
     vsearchpath,
     paste(
-      " --usearch_global temp.fasta --db temp.fasta --self --iddef 1",
+      " --usearch_global ",
+      shQuote(temp_fasta),
+      " --db ",
+      shQuote(temp_fasta),
+      " --self --iddef 1",
       " -userfields query+target+id --maxaccepts 0 --query_cov .9 --maxhits 10",
       " -id ",
       id,
-      "  --userout match_list.txt",
+      "  --userout ",
+      shQuote(match_list_file),
       sep = ""
     ),
     stdout = TRUE,
     stderr = TRUE
   )
 
-  match_list <- utils::read.csv(file = "match_list.txt", sep = "\t")
+  match_list <- utils::read.csv(file = match_list_file, sep = "\t")
 
   message("Lulu algorithm")
   res_lulu <-
     lulu(data.frame(t(physeq@otu_table), ...), match_list)
 
   if (!keep_temporary_files) {
-    if (file.exists("temp.fasta")) {
-      unlink("temp.fasta")
+    if (file.exists(temp_fasta)) {
+      unlink(temp_fasta)
     }
-    if (file.exists("cluster.fasta")) {
-      unlink("cluster.fasta")
+    if (file.exists(paste0(tempdir(), "/cluster.fasta"))) {
+      unlink(paste0(tempdir(), "/cluster.fasta"))
     }
-    if (file.exists("temp.uc")) {
-      unlink("temp.uc")
+    if (file.exists(paste0(tempdir(), "/temp.uc"))) {
+      unlink(paste0(tempdir(), "/temp.uc"))
     }
-    if (file.exists("match_list.txt")) {
-      unlink("match_list.txt")
+    if (file.exists(match_list_file)) {
+      unlink(match_list_file)
     }
   }
   merged <- res_lulu$otu_map[res_lulu$otu_map$curated == "merged", ]
@@ -1134,7 +1383,8 @@ lulu_pq <- function(physeq,
   test_vector <- vector(mode = "logical")
   for (tax_rank in colnames(physeq@tax_table)) {
     test <-
-      physeq@tax_table[rownames(merged), tax_rank] == physeq@tax_table[merged$parent_id, tax_rank]
+      physeq@tax_table[rownames(merged), tax_rank] ==
+        physeq@tax_table[merged$parent_id, tax_rank]
     test_vector <-
       c(
         test_vector,
@@ -1177,7 +1427,6 @@ lulu_pq <- function(physeq,
 }
 ################################################################################
 
-
 ################################################################################
 #' MUMU reclustering of class `physeq`
 #'
@@ -1198,10 +1447,16 @@ lulu_pq <- function(physeq,
 #' @param vsearchpath (default: vsearch) path to vsearch.
 #' @param mumupath path to mumu. See [mumu](https://github.com/frederic-mahe/mumu)
 #'   for installation instruction
+#' @param lulu_exact (logical) If true, use the exact same algorithm as LULU
+#'  corresponding to the --legacy option of mumu. Need mumu version >= v1.1.0
 #' @param verbose (logical) If true, print some additional messages.
 #' @param clean_pq (logical) If true, empty samples and empty ASV are discarded
 #'   before clustering.
 #' @param keep_temporary_files (logical, default: FALSE) Do we keep temporary files
+#' @param extra_mumu_args (character, default: NULL) Additional arguments passed
+#'  on to mumu command line. See `man mumu` into bash for details. Major args are
+#' `--minimum_match`, `--minimum_ratio_type`, `--minimum_ratio`,
+#' `--minimum_relative_cooccurence` and `--threads`
 #' @return a list of for object
 #' - "new_physeq": The new phyloseq object (class physeq)
 #' - "mumu_results": The log file of the mumu software. Run `man mumu` into
@@ -1211,7 +1466,9 @@ lulu_pq <- function(physeq,
 #' @seealso [lulu_pq()]
 #' @examplesIf MiscMetabar::is_mumu_installed()
 #' \dontrun{
-#' mumu_pq(data_fungi_sp_known)
+#' ntaxa(data_fungi_sp_known)
+#' ntaxa(mumu_pq(data_fungi_sp_known)$new_physeq)
+#' ntaxa(mumu_pq(data_fungi_sp_known, extra_mumu_args = "--minimum_match 90")$new_physeq)
 #' }
 #' @author Frédéric Mahé
 #'   & Adrien Taudière \email{adrien.taudiere@@zaclys.net}
@@ -1225,14 +1482,18 @@ lulu_pq <- function(physeq,
 #'   [lulu](https://www.nature.com/articles/s41467-017-01312-x) if you use this function
 #'   for your work.
 #'
-mumu_pq <- function(physeq,
-                    nproc = 1,
-                    id = 0.84,
-                    vsearchpath = "vsearch",
-                    mumupath = "mumu",
-                    verbose = FALSE,
-                    clean_pq = TRUE,
-                    keep_temporary_files = FALSE) {
+mumu_pq <- function(
+  physeq,
+  nproc = 1,
+  id = 0.84,
+  vsearchpath = find_vsearch(),
+  mumupath = "mumu",
+  lulu_exact = FALSE,
+  verbose = FALSE,
+  clean_pq = TRUE,
+  keep_temporary_files = FALSE,
+  extra_mumu_args = NULL
+) {
   verify_pq(physeq)
   if (is.null(physeq@refseq)) {
     stop("The phyloseq object do not contain a @refseq slot")
@@ -1241,17 +1502,28 @@ mumu_pq <- function(physeq,
     physeq <- clean_pq(physeq)
   }
 
+  temp_fasta <- paste0(tempdir(), "/temp.fasta")
+  match_list_file <- paste0(tempdir(), "/match_list.txt")
+  otu_table_file <- paste0(tempdir(), "/otu_table.csv")
+  log_file <- paste0(tempdir(), "/log.txt")
+  new_otu_file <- paste0(tempdir(), "/new_OTU.tablemumu")
+
   message("Start Vsearch usearch_global")
   dna <- Biostrings::DNAStringSet(physeq@refseq)
-  Biostrings::writeXStringSet(dna, "temp.fasta")
+  Biostrings::writeXStringSet(dna, temp_fasta)
   system2(
     vsearchpath,
     paste(
-      " --usearch_global temp.fasta --db temp.fasta --self --iddef 1",
+      " --usearch_global ",
+      shQuote(temp_fasta),
+      " --db ",
+      shQuote(temp_fasta),
+      " --self --iddef 1",
       " -userfields query+target+id --maxaccepts 0 --query_cov 0.9 --maxhits 10",
       " -id ",
       id,
-      "  --userout match_list.txt"
+      "  --userout ",
+      shQuote(match_list_file)
     ),
     stdout = TRUE,
     stderr = TRUE
@@ -1261,24 +1533,40 @@ mumu_pq <- function(physeq,
   otu_tab <- cbind("Taxa" = rownames(otu_tab), otu_tab)
   write.table(
     otu_tab,
-    "otu_table.csv",
+    otu_table_file,
     sep = "\t",
     row.names = FALSE,
     quote = FALSE
   )
 
   message("Mumu algorithm")
+
+  mumu_cmd <-
+    paste0(
+      " --otu_table ",
+      shQuote(otu_table_file),
+      " --match_list ",
+      shQuote(match_list_file),
+      " --log ",
+      shQuote(log_file),
+      " --new_otu_table ",
+      shQuote(new_otu_file)
+    )
+
+  if (!is.null(extra_mumu_args)) {
+    mumu_cmd <- paste0(mumu_cmd, " ", extra_mumu_args)
+    message("mumu is runned with option(s)", extra_mumu_args)
+  }
+  if (lulu_exact) {
+    mumu_cmd <- paste0(mumu_cmd, " --legacy ")
+    message("Using LULU exact mode (--legacy option in mumu)")
+  }
   system2(
     mumupath,
-    paste(
-      "--otu_table otu_table.csv",
-      "--match_list match_list.txt",
-      "--log log.txt",
-      "--new_otu_table new_OTU.tablemumu"
-    )
+    args = mumu_cmd
   )
 
-  res_mumu <- read.delim("new_OTU.tablemumu")
+  res_mumu <- read.delim(new_otu_file)
   new_otu_tab <- otu_table(res_mumu[, -1], taxa_are_rows = TRUE)
   taxa_names(new_otu_tab) <- res_mumu[, 1]
 
@@ -1309,7 +1597,7 @@ mumu_pq <- function(physeq,
     )
   }
 
-  result_mumu <- read.delim("log.txt")
+  result_mumu <- read.delim(log_file)
   colnames(result_mumu) <-
     c(
       "Query_ASV",
@@ -1330,27 +1618,26 @@ mumu_pq <- function(physeq,
     )
 
   if (!keep_temporary_files) {
-    if (file.exists("temp.fasta")) {
-      unlink("temp.fasta")
+    if (file.exists(temp_fasta)) {
+      unlink(temp_fasta)
     }
-    if (file.exists("cluster.fasta")) {
-      unlink("cluster.fasta")
+    if (file.exists(paste0(tempdir(), "/cluster.fasta"))) {
+      unlink(paste0(tempdir(), "/cluster.fasta"))
     }
-    if (file.exists("temp.uc")) {
-      unlink("temp.uc")
+    if (file.exists(paste0(tempdir(), "/temp.uc"))) {
+      unlink(paste0(tempdir(), "/temp.uc"))
     }
-
-    if (file.exists("log.txt")) {
-      unlink("temp.uc")
+    if (file.exists(log_file)) {
+      unlink(log_file)
     }
-    if (file.exists("match_list.txt")) {
-      unlink("match_list.txt")
+    if (file.exists(match_list_file)) {
+      unlink(match_list_file)
     }
-    if (file.exists("otu_table.csv")) {
-      unlink("otu_table.csv")
+    if (file.exists(otu_table_file)) {
+      unlink(otu_table_file)
     }
-    if (file.exists("new_OTU.tablemumu")) {
-      unlink("new_OTU.tablemumu")
+    if (file.exists(new_otu_file)) {
+      unlink(new_otu_file)
     }
   }
 
@@ -1358,8 +1645,805 @@ mumu_pq <- function(physeq,
 }
 ################################################################################
 
+################################################################################
+#' Verify the taxonomy table of a phyloseq object
+#'
+#' @description
+#'
+#' <a href="https://adrientaudiere.github.io/MiscMetabar/articles/Rules.html#lifecycle">
+#' <img src="https://img.shields.io/badge/lifecycle-experimental-orange" alt="lifecycle-experimental"></a>
+#'
+#' Check taxonomy table for common issues and send warnings/messages accordingly.
+#' This function is called by [verify_pq()] when `check_taxonomy = TRUE`.
+#'
+#' @inheritParams clean_pq
+#' @param verbose (logical, default TRUE) If TRUE, print warnings and messages
+#'   about potential taxonomy issues.
+#' @param replace_to_NA (character vector) A vector of regex patterns to identify
+#'   values that should be considered as NA. Defaults to
+#'   [unwanted_tax_patterns], a named character vector of common
+#'   placeholders like "unclassified", "unknown", "uncultured",
+#'   "incertae_sedis", "metagenome", empty QIIME-style ranks, etc.
+#' @param min_char (integer, default 4) Minimum number of characters for a
+#'   taxonomic value to be considered valid. Values with fewer characters
+#'   (excluding NA) will trigger a warning when verbose = TRUE.
+#' @param redundant_suffix (character, default "_sp") Suffix pattern to detect
+#'   redundant taxonomic information. For example, "Russula_sp" in Species
+#'   column is redundant if "Russula" is already present in the Genus column.
+#'   Set to NULL to disable this check. Other examples: "_var", "_ssp", "_cf".
+#' @param taxonomic_ranks (character vector, default NULL) Names of taxonomic
+#'   ranks in hierarchical order from highest to lowest (e.g.,
+#'   c("Kingdom", "Phylum", "Class", "Order", "Family", "Genus", "Species")).
+#'   If NULL, uses the column names of the taxonomy table in their existing order.
+#'   Used to determine parent-child relationships for redundant suffix detection.
+#' @param modify_phyloseq (logical, default FALSE) If TRUE, replace problematic
+#'   values with NA in the taxonomy table and return the modified phyloseq object.
+#'   The following types of values are replaced:
+#'   \itemize{
+#'     \item Values matching `replace_to_NA` patterns (e.g., "unclassified", "unknown")
+#'     \item Values with fewer than `min_char` characters
+#'     \item Redundant suffix patterns (e.g., "Russula_sp" when "Russula" is in Genus)
+#'     \item Leading/trailing whitespace, including non-breaking space
+#'           U+00A0 and other Unicode separators (if
+#'           `remove_border_spaces = TRUE`)
+#'     \item Internal spaces, including Unicode separators (if
+#'           `remove_all_space = TRUE`)
+#'     \item Invisible / unusual characters such as control chars, zero-width
+#'           space U+200B or non-breaking space U+00A0 inside values (if
+#'           `replace_invisible_chars = TRUE`)
+#'   }
+#'   Messages will indicate the number of values replaced for each type.
+#' @param remove_border_spaces (logical, default TRUE) If TRUE and
+#'   `modify_phyloseq = TRUE`, remove leading and trailing whitespace from
+#'   taxonomic values. Matches both ASCII whitespace and Unicode separators
+#'   (NBSP, em space, ideographic space, ...) — `trimws()` alone only handles
+#'   `[ \\t\\r\\n]` and would silently leave NBSP in place.
+#' @param remove_all_space (logical, default FALSE) If TRUE and
+#'   `modify_phyloseq = TRUE`, replace internal whitespace (ASCII or Unicode
+#'   separator) with the character specified in `replace_space_with`.
+#' @param replace_space_with (character, default "_") Character to use when
+#'   replacing internal spaces. Only used when `remove_all_space = TRUE`.
+#' @param detect_invisible_chars (logical, default TRUE) If TRUE, scan
+#'   taxonomic values for invisible / unusual characters: anything in
+#'   Unicode category `\\p{C}` (control / format / surrogate / private use /
+#'   unassigned) or any `\\p{Z}` separator other than a plain ASCII space or
+#'   tab. Typical offenders include non-breaking space (U+00A0), zero-width
+#'   space (U+200B), zero-width joiner (U+200D), and control characters.
+#'   Letters with diacritics, digits and punctuation are NOT flagged.
+#' @param replace_invisible_chars (logical, default FALSE) If TRUE and
+#'   `modify_phyloseq = TRUE`, strip the characters detected by
+#'   `detect_invisible_chars` from taxonomic values (replacement is
+#'   `invisible_chars_replacement`, default empty string). Values that become
+#'   empty after stripping are turned into `NA`.
+#' @param invisible_chars_replacement (character, default `""`) Replacement
+#'   string for `replace_invisible_chars = TRUE`.
+#'
+#' @return If `modify_phyloseq = FALSE` (default): Nothing (invisible NULL).
+#'   Warnings/messages only if verbose = TRUE and issues are found.
+#'   If `modify_phyloseq = TRUE`: The modified phyloseq object with problematic
+#'   values replaced by NA, along with messages summarizing the changes.
+#'
+#' @export
+#' @author Adrien Taudière
+#'
+#' @examples
+#' \donttest{
+#' verify_tax_table(data_fungi_mini)
+#' verify_tax_table(data_fungi_mini, verbose = TRUE)
+#'
+#' # Check for redundant "_sp" patterns (default)
+#' data_fungi2 <- data_fungi_mini
+#' data_fungi2@tax_table[1, "Species"] <- "Eutypa_sp"
+#' verify_tax_table(data_fungi2, verbose = TRUE, redundant_suffix = "_sp")
+#'
+#' # Automatically replace problematic values with NA
+#' # This replaces: NA-like patterns, short values, and redundant suffixes
+#' data_fungi2_cleaned <- verify_tax_table(data_fungi2,
+#'   modify_phyloseq = TRUE
+#' )
+#' # Check that the redundant value was replaced
+#' data_fungi2@tax_table[1, "Species"] # "Eutypa_sp"
+#' data_fungi2_cleaned@tax_table[1, "Species"] # NA
+#'
+#' # Combine verbose mode with modifications to see all issues
+#' data_fungi2_cleaned <- verify_tax_table(data_fungi2,
+#'   verbose = TRUE,
+#'   modify_phyloseq = TRUE
+#' )
+#'
+#' # Check for other patterns like "_var" or "_cf"
+#' verify_tax_table(data_fungi_mini, verbose = TRUE, redundant_suffix = "_var")
+#'
+#' # Disable redundant suffix check
+#' verify_tax_table(data_fungi_mini, verbose = TRUE, redundant_suffix = NULL)
+#'
+#' # Specify custom taxonomic rank order
+#' verify_tax_table(data_fungi_mini,
+#'   verbose = TRUE,
+#'   taxonomic_ranks = c("Class", "Order", "Family", "Genus")
+#' )
+#'
+#' # Handle whitespace in taxonomic values
+#' # Create example with spaces
+#' data_fungi3 <- data_fungi_mini
+#' data_fungi3@tax_table[1, "Genus"] <- " Russula "
+#' data_fungi3@tax_table[2, "Species"] <- "Russula emetica"
+#'
+#' # Check for spaces (verbose mode)
+#' verify_tax_table(data_fungi3, verbose = TRUE)
+#'
+#' # Remove leading/trailing whitespace (enabled by default)
+#' data_fungi3_trimmed <- verify_tax_table(data_fungi3, modify_phyloseq = TRUE)
+#' data_fungi3_trimmed@tax_table[1, "Genus"] # "Russula" (trimmed)
+#'
+#' # Also replace internal spaces with underscores
+#' data_fungi3_cleaned <- verify_tax_table(data_fungi3,
+#'   modify_phyloseq = TRUE,
+#'   remove_all_space = TRUE,
+#'   replace_space_with = "_"
+#' )
+#' data_fungi3_cleaned@tax_table[2, "Species"] # "Russula_emetica"
+#' }
+verify_tax_table <- function(
+  physeq,
+  verbose = TRUE,
+  replace_to_NA = unwanted_tax_patterns,
+  min_char = 4,
+  redundant_suffix = "_sp",
+  taxonomic_ranks = c(
+    "Domain",
+    "Phylum",
+    "Class",
+    "Order",
+    "Family",
+    "Genus",
+    "Species"
+  ),
+  modify_phyloseq = FALSE,
+  remove_border_spaces = TRUE,
+  remove_all_space = FALSE,
+  replace_space_with = "_",
+  detect_invisible_chars = TRUE,
+  replace_invisible_chars = FALSE,
+  invisible_chars_replacement = ""
+) {
+  if (is.null(physeq@tax_table)) {
+    warning(
+      "The phyloseq object does not contain a taxonomy table (@tax_table slot)."
+    )
+    if (modify_phyloseq) {
+      return(physeq)
+    } else {
+      return(invisible(NULL))
+    }
+  }
 
+  # If not verbose and not modifying, return early
+  if (!verbose && !modify_phyloseq) {
+    message(
+      "No checks performed on taxonomy table because verbose = FALSE and modify_phyloseq = FALSE. ",
+      "Set verbose = TRUE to see potential issues or modify_phyloseq = TRUE to automatically replace problematic values with NA."
+    )
+    return(invisible(NULL))
+  }
 
+  tax_mat <- as.matrix(physeq@tax_table)
+  rank_names <- colnames(tax_mat)
+
+  # Track modifications when modify_phyloseq = TRUE
+  n_replaced_patterns <- 0
+  n_replaced_short <- 0
+  n_replaced_redundant <- 0
+  n_trimmed_spaces <- 0
+  n_replaced_internal_spaces <- 0
+  n_replaced_invisible <- 0
+
+  # 1. Check/replace values matching replace_to_NA patterns
+  pattern_matches <- list()
+  for (pattern in replace_to_NA) {
+    matches <- which(grepl(pattern, tax_mat) & !is.na(tax_mat), arr.ind = TRUE)
+    if (nrow(matches) > 0) {
+      for (i in seq_len(nrow(matches))) {
+        val <- tax_mat[matches[i, 1], matches[i, 2]]
+        pattern_matches[[length(pattern_matches) + 1]] <- list(
+          value = val,
+          rank = rank_names[matches[i, 2]],
+          row = matches[i, 1],
+          col = matches[i, 2],
+          pattern = pattern
+        )
+      }
+    }
+  }
+
+  if (length(pattern_matches) > 0) {
+    unique_values <- unique(sapply(pattern_matches, function(x) x$value))
+    if (length(unique_values) <= 10) {
+      val_display <- paste(unique_values, collapse = ", ")
+    } else {
+      val_display <- paste(c(unique_values[1:10], "..."), collapse = ", ")
+    }
+
+    if (modify_phyloseq) {
+      # Replace matching values with NA
+      for (match in pattern_matches) {
+        tax_mat[match$row, match$col] <- NA
+      }
+      n_replaced_patterns <- length(pattern_matches)
+      message(
+        "Replaced ",
+        n_replaced_patterns,
+        " NA-like value(s) with NA. ",
+        "Unique values: ",
+        val_display
+      )
+    } else if (verbose) {
+      warning(
+        "Found ",
+        length(pattern_matches),
+        " taxonomic value(s) matching NA-like patterns. ",
+        "Unique values: ",
+        val_display,
+        ". ",
+        "Use modify_phyloseq = TRUE to replace these with NA."
+      )
+    }
+  }
+
+  # 2. Check/replace values with less than min_char characters.
+  nchar_mat <- nchar(tax_mat)
+  short_mask <- !is.na(tax_mat) & nchar_mat < min_char & nchar_mat > 0
+  short_idx <- which(short_mask, arr.ind = TRUE)
+  if (nrow(short_idx) > 0) {
+    short_matches <- lapply(seq_len(nrow(short_idx)), function(k) {
+      list(
+        value = tax_mat[short_idx[k, 1], short_idx[k, 2]],
+        rank = rank_names[short_idx[k, 2]],
+        row = short_idx[k, 1],
+        col = short_idx[k, 2],
+        nchar = nchar_mat[short_idx[k, 1], short_idx[k, 2]]
+      )
+    })
+  } else {
+    short_matches <- list()
+  }
+
+  if (length(short_matches) > 0) {
+    unique_short <- unique(sapply(short_matches, function(x) {
+      paste0(x$value, " (", x$rank, ", ", x$nchar, " chars)")
+    }))
+    if (length(unique_short) <= 10) {
+      short_display <- paste(unique_short, collapse = ", ")
+    } else {
+      short_display <- paste(c(unique_short[1:10], "..."), collapse = ", ")
+    }
+
+    if (modify_phyloseq) {
+      # Replace short values with NA
+      for (match in short_matches) {
+        tax_mat[match$row, match$col] <- NA
+      }
+      n_replaced_short <- length(short_matches)
+      message(
+        "Replaced ",
+        n_replaced_short,
+        " short value(s) (< ",
+        min_char,
+        " chars) with NA: ",
+        short_display
+      )
+    } else if (verbose) {
+      warning(
+        "Found ",
+        length(short_matches),
+        " taxonomic value(s) with less than ",
+        min_char,
+        " characters: ",
+        short_display,
+        ". ",
+        "Use modify_phyloseq = TRUE to replace these with NA."
+      )
+    }
+  }
+
+  # Verbose-only checks (3-5)
+  if (verbose) {
+    notna_mat_verbose <- !is.na(tax_mat)
+
+    # 3. Check for ranks with only NA values (after potential modifications)
+    ranks_only_na <- rank_names[colSums(notna_mat_verbose) == 0]
+
+    if (length(ranks_only_na) > 0) {
+      warning(
+        "The following taxonomic rank(s) contain only NA values: ",
+        paste(ranks_only_na, collapse = ", "),
+        ". ",
+        "Consider removing these ranks from the taxonomy table."
+      )
+    }
+
+    # 4. Check for non-nested ranks (parent NA but child filled). Only a
+    # message, not a warning, since it can be valid for storing extra info.
+    non_nested_count <- 0
+    if (ncol(tax_mat) > 1) {
+      any_notna <- rowSums(notna_mat_verbose) > 0
+      first_filled <- max.col(notna_mat_verbose, ties.method = "first")
+      non_nested_count <- sum(any_notna & first_filled > 1)
+    }
+
+    if (non_nested_count > 0) {
+      message(
+        "Found ",
+        non_nested_count,
+        " taxa with non-nested ranks ",
+        "(i.e., higher ranks are NA while lower ranks are filled). ",
+        "This is sometimes valid for storing additional taxonomic information, ",
+        "but may also indicate assignment issues."
+      )
+    }
+
+    # 5. Check for duplicate taxonomic paths.
+    tax_paths <- do.call(
+      paste,
+      c(lapply(seq_len(ncol(tax_mat)), function(j) tax_mat[, j]), sep = "|")
+    )
+    dup_count <- sum(duplicated(tax_paths))
+
+    if (dup_count > 0) {
+      message(
+        "Found ",
+        dup_count,
+        " taxa with duplicate taxonomic paths. ",
+        "This may indicate redundant taxa or issues with taxonomic assignment."
+      )
+    }
+  } # End of verbose-only checks (3-5)
+
+  # 6. Check/handle whitespace in taxonomic values. We use a PCRE pattern that matches both
+  # ASCII whitespace (\s) and every Unicode separator (\p{Z}, e.g. NBSP
+  # U+00A0, em space, ideographic space), because base R's \s in TRE mode
+  # and trimws() default to ASCII-only and would miss NBSP-padded values.
+  border_space_entries <- list()
+  internal_space_entries <- list()
+  notna_mat <- !is.na(tax_mat)
+
+  border_logical <- grepl(
+    "^[\\s\\p{Z}]|[\\s\\p{Z}]$",
+    tax_mat,
+    perl = TRUE
+  )
+  dim(border_logical) <- dim(tax_mat)
+  border_mask <- border_logical & notna_mat
+  has_border_spaces <- any(border_mask)
+  if (has_border_spaces) {
+    border_idx <- which(border_mask, arr.ind = TRUE)
+    border_space_entries <- lapply(seq_len(nrow(border_idx)), function(k) {
+      list(
+        value = tax_mat[border_idx[k, 1], border_idx[k, 2]],
+        rank = rank_names[border_idx[k, 2]],
+        row = border_idx[k, 1],
+        col = border_idx[k, 2]
+      )
+    })
+  }
+
+  trimmed_mat <- gsub(
+    "^[\\s\\p{Z}]+|[\\s\\p{Z}]+$",
+    "",
+    tax_mat,
+    perl = TRUE
+  )
+  dim(trimmed_mat) <- dim(tax_mat)
+  internal_logical <- grepl("[\\s\\p{Z}]", trimmed_mat, perl = TRUE)
+  dim(internal_logical) <- dim(tax_mat)
+  internal_mask <- internal_logical & notna_mat
+  has_internal_spaces <- any(internal_mask)
+  if (has_internal_spaces) {
+    internal_idx <- which(internal_mask, arr.ind = TRUE)
+    internal_space_entries <- lapply(seq_len(nrow(internal_idx)), function(k) {
+      list(
+        value = tax_mat[internal_idx[k, 1], internal_idx[k, 2]],
+        rank = rank_names[internal_idx[k, 2]],
+        row = internal_idx[k, 1],
+        col = internal_idx[k, 2]
+      )
+    })
+  }
+
+  # Handle border spaces
+  if (has_border_spaces) {
+    unique_border_values <- unique(sapply(border_space_entries, function(x) {
+      paste0("'", x$value, "' (", x$rank, ")")
+    }))
+    if (length(unique_border_values) <= 5) {
+      border_display <- paste(unique_border_values, collapse = ", ")
+    } else {
+      border_display <- paste(
+        c(unique_border_values[1:5], "..."),
+        collapse = ", "
+      )
+    }
+
+    if (modify_phyloseq && remove_border_spaces) {
+      # Trim leading/trailing whitespace, including Unicode separators
+      # (NBSP, em space, etc.) that trimws() does not strip by default.
+      for (entry in border_space_entries) {
+        tax_mat[entry$row, entry$col] <- gsub(
+          "^[\\s\\p{Z}]+|[\\s\\p{Z}]+$",
+          "",
+          tax_mat[entry$row, entry$col],
+          perl = TRUE
+        )
+      }
+      n_trimmed_spaces <- length(border_space_entries)
+      message(
+        "Trimmed leading/trailing whitespace from ",
+        n_trimmed_spaces,
+        " value(s): ",
+        border_display
+      )
+    } else if (verbose) {
+      warning(
+        "Found ",
+        length(border_space_entries),
+        " taxonomic value(s) with leading or trailing whitespace: ",
+        border_display,
+        ". ",
+        "Use modify_phyloseq = TRUE to trim these values."
+      )
+    }
+  }
+
+  # Handle internal spaces
+  if (has_internal_spaces) {
+    unique_internal_values <- unique(sapply(
+      internal_space_entries,
+      function(x) {
+        paste0("'", trimws(x$value), "' (", x$rank, ")")
+      }
+    ))
+    if (length(unique_internal_values) <= 5) {
+      internal_display <- paste(unique_internal_values, collapse = ", ")
+    } else {
+      internal_display <- paste(
+        c(unique_internal_values[1:5], "..."),
+        collapse = ", "
+      )
+    }
+
+    if (modify_phyloseq && remove_all_space) {
+      # Replace internal spaces (any \s or Unicode separator). First strip
+      # border whitespace (including NBSP), then collapse any run of inner
+      # whitespace into `replace_space_with`.
+      for (entry in internal_space_entries) {
+        current_val <- tax_mat[entry$row, entry$col]
+        trimmed <- gsub(
+          "^[\\s\\p{Z}]+|[\\s\\p{Z}]+$",
+          "",
+          current_val,
+          perl = TRUE
+        )
+        new_val <- gsub(
+          "[\\s\\p{Z}]+",
+          replace_space_with,
+          trimmed,
+          perl = TRUE
+        )
+        tax_mat[entry$row, entry$col] <- new_val
+      }
+      n_replaced_internal_spaces <- length(internal_space_entries)
+      message(
+        "Replaced internal spaces with '",
+        replace_space_with,
+        "' in ",
+        n_replaced_internal_spaces,
+        " value(s): ",
+        internal_display
+      )
+    } else if (verbose) {
+      warning(
+        "Found ",
+        length(internal_space_entries),
+        " taxonomic value(s) with internal spaces: ",
+        internal_display,
+        ". ",
+        "Use modify_phyloseq = TRUE and remove_all_space = TRUE to replace ",
+        "these spaces with '",
+        replace_space_with,
+        "'."
+      )
+    }
+  }
+
+  # 7. Detect invisible / unusual characters (control chars, zero-width
+  #    spaces, NBSP, em space, etc.). Letters with diacritics (\p{L}),
+  #    digits and punctuation are NOT flagged. ASCII space and tab are not
+  #    flagged either (they are already covered by the whitespace checks
+  #    above). Pattern: \p{C} (any "Other" category: control / format /
+  #    surrogate / private use / unassigned) OR a \p{Z} separator that is
+  #    not a plain space / tab.
+  invisible_pattern <- "[\\p{C}]|[\\p{Z}](?<! )(?<!\\t)"
+  invisible_entries <- list()
+  if (isTRUE(detect_invisible_chars)) {
+    invisible_logical <- grepl(invisible_pattern, tax_mat, perl = TRUE)
+    dim(invisible_logical) <- dim(tax_mat)
+    invisible_mask <- invisible_logical & notna_mat
+    if (any(invisible_mask)) {
+      invisible_idx <- which(invisible_mask, arr.ind = TRUE)
+      invisible_entries <- lapply(
+        seq_len(nrow(invisible_idx)),
+        function(k) {
+          list(
+            value = tax_mat[invisible_idx[k, 1], invisible_idx[k, 2]],
+            rank = rank_names[invisible_idx[k, 2]],
+            row = invisible_idx[k, 1],
+            col = invisible_idx[k, 2]
+          )
+        }
+      )
+    }
+  }
+
+  if (length(invisible_entries) > 0) {
+    describe_invisible <- function(x) {
+      # Show the value with each offending char rendered as its hex code
+      # point so the user can see what's hiding inside the string.
+      chars <- strsplit(x$value, "", fixed = TRUE)[[1]]
+      offenders <- vapply(
+        chars,
+        function(ch) {
+          if (grepl(invisible_pattern, ch, perl = TRUE)) {
+            sprintf("U+%04X", utf8ToInt(ch))
+          } else {
+            ""
+          }
+        },
+        character(1)
+      )
+      codes <- paste(offenders[nchar(offenders) > 0], collapse = ",")
+      paste0("'", x$value, "' (", x$rank, "; ", codes, ")")
+    }
+    unique_invisible <- unique(vapply(
+      invisible_entries,
+      describe_invisible,
+      character(1)
+    ))
+    if (length(unique_invisible) <= 5) {
+      invisible_display <- paste(unique_invisible, collapse = ", ")
+    } else {
+      invisible_display <- paste(
+        c(unique_invisible[1:5], "..."),
+        collapse = ", "
+      )
+    }
+
+    if (modify_phyloseq && isTRUE(replace_invisible_chars)) {
+      for (entry in invisible_entries) {
+        current_val <- tax_mat[entry$row, entry$col]
+        new_val <- gsub(
+          invisible_pattern,
+          invisible_chars_replacement,
+          current_val,
+          perl = TRUE
+        )
+        # Re-trim border whitespace in case the replacement created any
+        new_val <- gsub(
+          "^[\\s\\p{Z}]+|[\\s\\p{Z}]+$",
+          "",
+          new_val,
+          perl = TRUE
+        )
+        if (nchar(new_val) == 0) {
+          new_val <- NA_character_
+        }
+        tax_mat[entry$row, entry$col] <- new_val
+      }
+      n_replaced_invisible <- length(invisible_entries)
+      message(
+        "Replaced invisible/unusual character(s) in ",
+        n_replaced_invisible,
+        " value(s): ",
+        invisible_display
+      )
+    } else if (verbose) {
+      warning(
+        "Found ",
+        length(invisible_entries),
+        " taxonomic value(s) with invisible or unusual characters ",
+        "(e.g. NBSP U+00A0, zero-width space U+200B, control chars). ",
+        "Code points shown after each value: ",
+        invisible_display,
+        ". Use modify_phyloseq = TRUE and replace_invisible_chars = TRUE ",
+        "to strip them."
+      )
+    }
+  }
+
+  # 8. Check for redundant rank patterns (e.g., "Russula_sp" in Species
+  #    when "Russula" is already in Genus)
+  if (!is.null(redundant_suffix) && nchar(redundant_suffix) > 0) {
+    # Use provided taxonomic_ranks or default to column names
+    ranks_to_use <- if (is.null(taxonomic_ranks)) {
+      rank_names
+    } else {
+      taxonomic_ranks
+    }
+    # Keep only ranks that exist in the tax_table
+    ranks_to_use <- ranks_to_use[ranks_to_use %in% rank_names]
+
+    redundant_entries <- list()
+
+    if (length(ranks_to_use) > 1) {
+      # Vectorised: for each child rank j, find rows whose value ends
+      # with `redundant_suffix`, extract the prefix as a vector, and
+      # check parent ranks (k < j) column-by-column for an exact match.
+      # Equivalent to the previous nested-row/rank/parent loop but does
+      # one `grepl` / `sub` / column comparison per rank pair instead of
+      # one per cell.
+      suffix_pattern <- paste0(redundant_suffix, "$")
+      n_rows <- nrow(tax_mat)
+      taxa_name_vec <- rownames(tax_mat)
+      for (j in 2:length(ranks_to_use)) {
+        current_rank <- ranks_to_use[j]
+        current_col <- tax_mat[, current_rank]
+
+        is_suffix <- !is.na(current_col) & grepl(suffix_pattern, current_col)
+        if (!any(is_suffix)) {
+          next
+        }
+        prefix_vec <- sub(suffix_pattern, "", current_col)
+        has_prefix <- is_suffix & nchar(prefix_vec) > 0
+        if (!any(has_prefix)) {
+          next
+        }
+
+        matched <- logical(n_rows)
+        parent_match_rank <- character(n_rows)
+        parent_match_val <- character(n_rows)
+        for (k in 1:(j - 1)) {
+          parent_rank <- ranks_to_use[k]
+          parent_col <- tax_mat[, parent_rank]
+          new_match <- has_prefix &
+            !matched &
+            !is.na(parent_col) &
+            parent_col == prefix_vec
+          if (any(new_match)) {
+            parent_match_rank[new_match] <- parent_rank
+            parent_match_val[new_match] <- parent_col[new_match]
+            matched <- matched | new_match
+          }
+        }
+
+        if (any(matched)) {
+          for (ii in which(matched)) {
+            redundant_entries[[length(redundant_entries) + 1]] <- list(
+              taxa_idx = ii,
+              taxa_name = taxa_name_vec[ii],
+              current_rank = current_rank,
+              current_val = current_col[ii],
+              parent_rank = parent_match_rank[ii],
+              parent_val = parent_match_val[ii]
+            )
+          }
+        }
+      }
+    }
+
+    if (length(redundant_entries) > 0) {
+      # Create summary for warning message
+      unique_patterns <- unique(sapply(redundant_entries, function(x) {
+        paste0(x$current_val, " (", x$current_rank, " = ", x$parent_rank, ")")
+      }))
+
+      if (length(unique_patterns) <= 10) {
+        pattern_display <- paste(unique_patterns, collapse = ", ")
+      } else {
+        pattern_display <- paste(
+          c(unique_patterns[1:10], "..."),
+          collapse = ", "
+        )
+      }
+
+      if (modify_phyloseq) {
+        # Replace redundant values with NA
+        for (entry in redundant_entries) {
+          tax_mat[entry$taxa_idx, entry$current_rank] <- NA
+        }
+        n_replaced_redundant <- length(redundant_entries)
+        message(
+          "Replaced ",
+          n_replaced_redundant,
+          " redundant '",
+          redundant_suffix,
+          "' value(s) with NA: ",
+          pattern_display
+        )
+      } else if (verbose) {
+        warning(
+          "Found ",
+          length(redundant_entries),
+          " taxonomic value(s) with redundant ",
+          "'",
+          redundant_suffix,
+          "' patterns where the information is already ",
+          "present at a higher rank: ",
+          pattern_display,
+          ". ",
+          "Use modify_phyloseq = TRUE to replace these with NA."
+        )
+      }
+    }
+  }
+
+  # Return modified phyloseq if requested
+  if (modify_phyloseq) {
+    total_replaced_na <- n_replaced_patterns +
+      n_replaced_short +
+      n_replaced_redundant
+    total_space_modified <- n_trimmed_spaces + n_replaced_internal_spaces
+    total_modified <- total_replaced_na +
+      total_space_modified +
+      n_replaced_invisible
+
+    if (total_modified > 0) {
+      physeq@tax_table <- tax_table(tax_mat)
+      # Build summary message
+      summary_parts <- c()
+      if (total_replaced_na > 0) {
+        summary_parts <- c(
+          summary_parts,
+          paste0(
+            total_replaced_na,
+            " value(s) replaced with NA (",
+            n_replaced_patterns,
+            " NA-like patterns, ",
+            n_replaced_short,
+            " short values, ",
+            n_replaced_redundant,
+            " redundant suffixes)"
+          )
+        )
+      }
+      if (n_trimmed_spaces > 0) {
+        summary_parts <- c(
+          summary_parts,
+          paste0(n_trimmed_spaces, " value(s) trimmed of border whitespace")
+        )
+      }
+      if (n_replaced_internal_spaces > 0) {
+        summary_parts <- c(
+          summary_parts,
+          paste0(
+            n_replaced_internal_spaces,
+            " value(s) had internal spaces replaced"
+          )
+        )
+      }
+      if (n_replaced_invisible > 0) {
+        summary_parts <- c(
+          summary_parts,
+          paste0(
+            n_replaced_invisible,
+            " value(s) had invisible/unusual characters stripped"
+          )
+        )
+      }
+      message(
+        "Total: ",
+        total_modified,
+        " modification(s) in the taxonomy table: ",
+        paste(summary_parts, collapse = "; "),
+        "."
+      )
+    } else {
+      message("No values to modify. Returning original phyloseq object.")
+    }
+    return(physeq)
+  }
+
+  return(invisible(NULL))
+}
+################################################################################
 
 ################################################################################
 #' Verify the validity of a phyloseq object
@@ -1377,18 +2461,94 @@ mumu_pq <- function(physeq,
 #'   Minimum number of sequences per samples to not show warning.
 #' @param min_nb_seq_taxa (numeric) Only used if verbose = TRUE.
 #'   Minimum number of sequences per taxa to not show warning.
+#' @param check_taxonomy (logical, default FALSE) If TRUE, call
+#'   [verify_tax_table()] to check for common taxonomy table issues.
+#' @param ... Additional arguments passed to [verify_tax_table()] when
+#'   `check_taxonomy = TRUE`.
 #' @return Nothing if the phyloseq object is valid. An error in the other case.
-#'  Warnings if verbose = TRUE
+#'  Warnings if verbose = TRUE or check_taxonomy = TRUE
 #' @export
 #' @author Adrien Taudière
-verify_pq <- function(physeq,
-                      verbose = FALSE,
-                      min_nb_seq_sample = 500,
-                      min_nb_seq_taxa = 1) {
-  if (!methods::validObject(physeq) ||
-    !inherits(physeq, "phyloseq")) {
+#'
+#' @examples
+#'
+#' verify_pq(data_fungi_mini)
+#' \donttest{
+#' verify_pq(data_fungi_mini, check_taxonomy = TRUE)
+#' }
+verify_pq <- function(
+  physeq,
+  verbose = FALSE,
+  min_nb_seq_sample = 500,
+  min_nb_seq_taxa = 1,
+  check_taxonomy = FALSE,
+  ...
+) {
+  # check consistency of taxa_names between slots
+  taxa_slots <- list()
+  if (!is.null(physeq@otu_table)) {
+    taxa_slots[["otu_table"]] <- taxa_names(physeq@otu_table)
+  }
+  if (!is.null(physeq@tax_table)) {
+    taxa_slots[["tax_table"]] <- taxa_names(physeq@tax_table)
+  }
+  if (!is.null(physeq@refseq)) {
+    taxa_slots[["refseq"]] <- names(physeq@refseq)
+  }
+  if (!is.null(physeq@phy_tree)) {
+    taxa_slots[["phy_tree"]] <- phyloseq::taxa_names(physeq@phy_tree)
+  }
+
+  slot_names <- names(taxa_slots)
+  for (i in seq_along(slot_names)[-length(slot_names)]) {
+    for (j in (i + 1):length(slot_names)) {
+      if (!setequal(taxa_slots[[i]], taxa_slots[[j]])) {
+        stop(paste0(
+          "Inconsistency of taxa_names between ",
+          slot_names[i],
+          " and ",
+          slot_names[j],
+          " slots. \n
+          Run taxa_names(physeq@",
+          slot_names[i],
+          ") to see the taxa_names of the ",
+          slot_names[i],
+          " slot \n
+          Run taxa_names(physeq@",
+          slot_names[j],
+          ") to see the taxa_names of the ",
+          slot_names[j],
+          " slot \n"
+        ))
+      }
+    }
+  }
+
+  # check for duplicate in refseq
+  if (!is.null(physeq@refseq)) {
+    if (any(duplicated(as.character(physeq@refseq)))) {
+      stop("Duplicated references sequences found in refseq slot.")
+    }
+  }
+
+  # check consistency of sample_names between otu_table and sam_data
+  if (!is.null(physeq@otu_table) && !is.null(physeq@sam_data)) {
+    otu_samples <- sample_names(physeq@otu_table)
+    sam_samples <- sample_names(physeq@sam_data)
+    if (!setequal(otu_samples, sam_samples)) {
+      stop(
+        "Inconsistency of sample_names between otu_table and sam_data slots."
+      )
+    }
+  }
+
+  if (
+    !methods::validObject(physeq) ||
+      !inherits(physeq, "phyloseq")
+  ) {
     stop("The physeq argument is not a valid phyloseq object.")
   }
+
   if (verbose) {
     if (min(sample_sums(physeq)) < min_nb_seq_sample) {
       warning(
@@ -1421,9 +2581,12 @@ verify_pq <- function(physeq,
       )
     }
   }
+
+  if (check_taxonomy) {
+    verify_tax_table(physeq, verbose = TRUE, ...)
+  }
 }
 ################################################################################
-
 
 ################################################################################
 #' Subset samples using a conditional boolean vector.
@@ -1469,7 +2632,7 @@ subset_samples_pq <- function(physeq, condition) {
     return(physeq)
   } else {
     old_DF <- as(sample_data(physeq), "data.frame")
-    new_DF <- old_DF[condition, ]
+    new_DF <- old_DF[condition, , drop = FALSE]
     if (inherits(physeq, "sample_data")) {
       return(sample_data(new_DF))
     } else {
@@ -1508,6 +2671,7 @@ subset_samples_pq <- function(physeq, condition) {
 #' @examples
 #'
 #' subset_taxa_pq(data_fungi, data_fungi@tax_table[, "Phylum"] == "Ascomycota")
+#' subset_taxa_pq(data_fungi, taxa_sums(data_fungi) > 100)
 #'
 #' cond_taxa <- grepl("Endophyte", data_fungi@tax_table[, "Guild"])
 #' names(cond_taxa) <- taxa_names(data_fungi)
@@ -1520,11 +2684,13 @@ subset_samples_pq <- function(physeq, condition) {
 #' @return a new phyloseq object
 #' @export
 #' @author Adrien Taudière
-subset_taxa_pq <- function(physeq,
-                           condition,
-                           verbose = TRUE,
-                           clean_pq = TRUE,
-                           taxa_names_from_physeq = FALSE) {
+subset_taxa_pq <- function(
+  physeq,
+  condition,
+  verbose = TRUE,
+  clean_pq = TRUE,
+  taxa_names_from_physeq = FALSE
+) {
   if (inherits(condition, "taxonomyTable")) {
     condition_temp <- as.vector(condition)
     names(condition_temp) <- rownames(condition)
@@ -1538,7 +2704,10 @@ subset_taxa_pq <- function(physeq,
   if (!sum(names(condition) %in% taxa_names(physeq)) == length(condition)) {
     stop(paste(
       "Some names in condition do not fit taxa_names of physeq : ",
-      paste(names(condition)[!names(condition) %in% taxa_names(physeq)], collapse = "/")
+      paste(
+        names(condition)[!names(condition) %in% taxa_names(physeq)],
+        collapse = "/"
+      )
     ))
   }
 
@@ -1566,12 +2735,20 @@ subset_taxa_pq <- function(physeq,
   }
 
   if (verbose) {
-    message(paste("Number of non-matching ASV", sum(is.na(
-      match(taxa_names(physeq), names(condition))
-    ))))
-    message(paste("Number of matching ASV", sum(!is.na(
-      match(taxa_names(physeq), names(condition))
-    ))))
+    message(paste(
+      "Number of non-matching ASV",
+      sum(is.na(
+        match(taxa_names(physeq), names(condition))
+      ))
+    ))
+    message(paste(
+      "Number of matching ASV",
+      sum(
+        !is.na(
+          match(taxa_names(physeq), names(condition))
+        )
+      )
+    ))
     message(paste(
       "Number of filtered-out ASV",
       ntaxa(physeq) - ntaxa(new_physeq)
@@ -1621,11 +2798,13 @@ subset_taxa_pq <- function(physeq,
 #'   min_nb_seq = 10,
 #'   combination = "OR"
 #' )
-filt_taxa_pq <- function(physeq,
-                         min_nb_seq = NULL,
-                         min_occurence = NULL,
-                         combination = "AND",
-                         clean_pq = TRUE) {
+filt_taxa_pq <- function(
+  physeq,
+  min_nb_seq = NULL,
+  min_occurence = NULL,
+  combination = "AND",
+  clean_pq = TRUE
+) {
   new_physeq <- physeq
   if (is.null(min_nb_seq) && is.null(min_occurence)) {
     stop("You must inform either min_nb_seq or min_occurence or both params!")
@@ -1648,15 +2827,15 @@ filt_taxa_pq <- function(physeq,
       new_physeq <-
         subset_taxa_pq(
           new_physeq,
-          taxa_sums(as_binary_otu_table(new_physeq)) >= 1 &
-            taxa_sums((new_physeq)) >= 100
+          taxa_sums(as_binary_otu_table(new_physeq)) >= min_occurence &
+            taxa_sums((new_physeq)) >= min_nb_seq
         )
     } else if (combination == "OR") {
       new_physeq <-
         subset_taxa_pq(
           new_physeq,
-          taxa_sums(as_binary_otu_table(new_physeq)) >= 1 |
-            taxa_sums((new_physeq)) >= 100
+          taxa_sums(as_binary_otu_table(new_physeq)) >= min_occurence |
+            taxa_sums((new_physeq)) >= min_nb_seq
         )
     }
   }
@@ -1703,7 +2882,8 @@ select_one_sample <- function(physeq, sam_name, silent = FALSE) {
     )
   }
   cl_sam <-
-    clean_pq(subset_samples_pq(physeq, sample_names(physeq) == sam_name),
+    clean_pq(
+      subset_samples_pq(physeq, sample_names(physeq) == sam_name),
       silent = TRUE
     )
 
@@ -1731,7 +2911,6 @@ select_one_sample <- function(physeq, sam_name, silent = FALSE) {
 }
 ################################################################################
 
-
 ################################################################################
 #' Add new taxonomic rank to a phyloseq object.
 #'
@@ -1745,7 +2924,7 @@ select_one_sample <- function(physeq, sam_name, silent = FALSE) {
 #'
 #' @inheritParams clean_pq
 #' @param ref_fasta (required) A link to a database.
-#'   passed on to `dada2::assignTaxonomy`.
+#'   passed on to `method`.
 #' @param method (required, default "dada2") :
 #'
 #' - "dada2": [dada2::assignTaxonomy()]
@@ -1768,7 +2947,9 @@ select_one_sample <- function(physeq, sam_name, silent = FALSE) {
 #'   Note that if trainingSet is not NULL, the ref_fasta is overwrite by the
 #'   trainingSet parameter. To customize learning parameters of the idtaxa
 #'   algorithm you must use trainingSet computed by the function [learn_idtaxa()].
-#' @param min_bootstrap  (Float \[0:1\])
+#' @param min_bootstrap  (Float \[0:1\]) If null (default), the default value
+#'  of each taxonomic assignation method is used (see after). Set to 0 to
+#'  disable any bootstrap filtering.
 #'
 #'   Minimum bootstrap value to inform taxonomy. For each bootstrap
 #'   below the min_bootstrap value, the taxonomy information is set to NA.
@@ -1800,6 +2981,7 @@ select_one_sample <- function(physeq, sam_name, silent = FALSE) {
 #' )
 #' add_new_taxonomy_pq(data_fungi_mini, ref_fasta, method = "dada2")
 #' add_new_taxonomy_pq(data_fungi_mini, ref_fasta, method = "dada2_2steps")
+#' add_new_taxonomy_pq(data_fungi_mini, ref_fasta, method = "sintax")
 #' add_new_taxonomy_pq(data_fungi_mini, ref_fasta, method = "lca")
 #' add_new_taxonomy_pq(data_fungi_mini, ref_fasta, method = "idtaxa")
 #'
@@ -1821,14 +3003,35 @@ select_one_sample <- function(physeq, sam_name, silent = FALSE) {
 #' @author Adrien Taudière
 #'
 add_new_taxonomy_pq <- function(
-    physeq,
-    ref_fasta,
-    suffix = NULL,
-    method = c("dada2", "sintax", "lca", "idtaxa", "blastn", "dada2_2steps"),
-    trainingSet = NULL,
-    min_bootstrap = NULL,
-    ...) {
+  physeq,
+  ref_fasta,
+  suffix = NULL,
+  method = c("dada2", "sintax", "lca", "idtaxa", "blastn", "dada2_2steps"),
+  trainingSet = NULL,
+  min_bootstrap = NULL,
+  ...
+) {
   method <- match.arg(method)
+
+  # Warn on a rank-name argument that the chosen method ignores: dada2 uses
+  # dada2::assignTaxonomy()'s `taxLevels`, whereas SINTAX uses assign_sintax()'s
+  # `taxa_ranks`. The unused one is silently dropped by the per-method `...`
+  # filtering below, which otherwise leads to confusing downstream errors.
+  dots_names <- ...names()
+  if (method == "sintax" && "taxLevels" %in% dots_names) {
+    cli::cli_warn(c(
+      "!" = "{.arg taxLevels} is a {.fn dada2::assignTaxonomy} argument and is
+             ignored when {.code method = \"sintax\"}.",
+      "i" = "Pass SINTAX rank names via {.arg taxa_ranks} instead."
+    ))
+  }
+  if (method == "dada2" && "taxa_ranks" %in% dots_names) {
+    cli::cli_warn(c(
+      "!" = "{.arg taxa_ranks} is a SINTAX ({.fn assign_sintax}) argument and is
+             ignored when {.code method = \"dada2\"}.",
+      "i" = "Pass dada2 rank names via {.arg taxLevels} instead."
+    ))
+  }
 
   if (is.null(min_bootstrap)) {
     min_bootstrap <- ifelse(method == "idtaxa", 0.6, 0.5)
@@ -1837,50 +3040,155 @@ add_new_taxonomy_pq <- function(
   if (is.null(suffix)) {
     suffix <- paste0("_", basename(ref_fasta), "_", method)
   }
+
+  # Validate ref_fasta format for methods that don't go through assign_*
+
   if (method == "dada2") {
-    list_args <- list(seqs = physeq@refseq, refFasta = ref_fasta, minBoot = 100 * min_bootstrap, ...)
-    list_args <- list_args[names(list_args) %in% c(
-      "seqs", "refFasta", "minBoot", "tryRC", "outputBootstraps",
-      "taxLevels", "multithread", "verbose"
-    )]
-    tax_tab <- do.call(dada2::assignTaxonomy, args = list_args, envir = parent.frame())
+    if (.detect_tax_format(ref_fasta) != "unite") {
+      .validate_ref_format(ref_fasta, "dada2", "add_new_taxonomy_pq")
+    }
+
+    list_args <- list(
+      seqs = physeq@refseq,
+      refFasta = ref_fasta,
+      minBoot = 100 * min_bootstrap,
+      ...
+    )
+    list_args <- list_args[
+      names(list_args) %in%
+        c(
+          "seqs",
+          "refFasta",
+          "minBoot",
+          "tryRC",
+          "outputBootstraps",
+          "taxLevels",
+          "multithread",
+          "verbose"
+        )
+    ]
+    tax_tab <- do.call(
+      dada2::assignTaxonomy,
+      args = list_args,
+      envir = parent.frame()
+    )
     colnames(tax_tab) <-
       make.unique(paste0(colnames(tax_tab), suffix))
     new_tax_tab <- tax_table(cbind(physeq@tax_table, tax_tab))
     new_physeq <- physeq
     tax_table(new_physeq) <- new_tax_tab
   } else if (method == "dada2_2steps") {
-    list_args <- list(physeq = physeq, ref_fasta = ref_fasta, min_bootstrap = min_bootstrap, suffix = suffix, ...)
-    list_args <- list_args[names(list_args) %in% names(formals("assign_dada2", envir = parent.frame()))]
-    new_physeq <- do.call(assign_dada2, args = list_args, envir = parent.frame())
+    list_args <- list(
+      physeq = physeq,
+      ref_fasta = ref_fasta,
+      min_bootstrap = min_bootstrap,
+      suffix = suffix,
+      ...
+    )
+    list_args <- list_args[
+      names(list_args) %in%
+        names(formals("assign_dada2", envir = parent.frame()))
+    ]
+    new_physeq <- do.call(
+      assign_dada2,
+      args = list_args,
+      envir = parent.frame()
+    )
   } else if (method == "sintax") {
-    list_args <- list(physeq = physeq, ref_fasta = ref_fasta, suffix = suffix, behavior = "add_to_phyloseq", min_bootstrap = min_bootstrap, ...)
-    list_args <- list_args[names(list_args) %in% names(formals("assign_sintax", envir = parent.frame()))]
-    new_physeq <- do.call(assign_sintax, args = list_args, envir = parent.frame())
+    list_args <- list(
+      physeq = physeq,
+      ref_fasta = ref_fasta,
+      suffix = suffix,
+      behavior = "add_to_phyloseq",
+      min_bootstrap = min_bootstrap,
+      ...
+    )
+    list_args <- list_args[
+      names(list_args) %in%
+        names(formals("assign_sintax", envir = parent.frame()))
+    ]
+    new_physeq <- do.call(
+      assign_sintax,
+      args = list_args,
+      envir = parent.frame()
+    )
   } else if (method == "lca") {
-    list_args <- list(physeq = physeq, ref_fasta = ref_fasta, suffix = suffix, behavior = "add_to_phyloseq", ...)
-    list_args <- list_args[names(list_args) %in% names(formals("assign_vsearch_lca", envir = parent.frame()))]
-    new_physeq <- do.call(assign_vsearch_lca, args = list_args, envir = parent.frame())
+    list_args <- list(
+      physeq = physeq,
+      ref_fasta = ref_fasta,
+      suffix = suffix,
+      behavior = "add_to_phyloseq",
+      ...
+    )
+    list_args <- list_args[
+      names(list_args) %in%
+        names(formals("assign_vsearch_lca", envir = parent.frame()))
+    ]
+    new_physeq <- do.call(
+      assign_vsearch_lca,
+      args = list_args,
+      envir = parent.frame()
+    )
   } else if (method == "idtaxa") {
     if (is.null(trainingSet)) {
-      list_args <- list(physeq = physeq, fasta_for_training = ref_fasta, suffix = suffix, behavior = "add_to_phyloseq", threshold = 100 * min_bootstrap, ...)
-      list_args <- list_args[names(list_args) %in% names(formals("assign_idtaxa", envir = parent.frame()))]
-      new_physeq <- do.call(assign_idtaxa, args = list_args, envir = parent.frame())
+      list_args <- list(
+        physeq = physeq,
+        fasta_for_training = ref_fasta,
+        suffix = suffix,
+        behavior = "add_to_phyloseq",
+        threshold = 100 * min_bootstrap,
+        ...
+      )
+      list_args <- list_args[
+        names(list_args) %in%
+          names(formals("assign_idtaxa", envir = parent.frame()))
+      ]
+      new_physeq <- do.call(
+        assign_idtaxa,
+        args = list_args,
+        envir = parent.frame()
+      )
     } else {
-      list_args <- list(physeq = physeq, trainingSet = trainingSet, suffix = suffix, behavior = "add_to_phyloseq", threshold = 100 * min_bootstrap, ...)
-      list_args <- list_args[names(list_args) %in% names(formals("assign_idtaxa", envir = parent.frame()))]
-      new_physeq <- do.call(assign_idtaxa, args = list_args, envir = parent.frame())
+      list_args <- list(
+        physeq = physeq,
+        trainingSet = trainingSet,
+        suffix = suffix,
+        behavior = "add_to_phyloseq",
+        threshold = 100 * min_bootstrap,
+        ...
+      )
+      list_args <- list_args[
+        names(list_args) %in%
+          names(formals("assign_idtaxa", envir = parent.frame()))
+      ]
+      new_physeq <- do.call(
+        assign_idtaxa,
+        args = list_args,
+        envir = parent.frame()
+      )
     }
   } else if (method == "blastn") {
-    list_args <- list(physeq = physeq, ref_fasta = ref_fasta, suffix = suffix, behavior = "add_to_phyloseq", ...)
-    list_args <- list_args[names(list_args) %in% names(formals("assign_blastn", envir = parent.frame()))]
-    new_physeq <- do.call(assign_blastn, args = list_args, envir = parent.frame())
+    list_args <- list(
+      physeq = physeq,
+      ref_fasta = ref_fasta,
+      suffix = suffix,
+      behavior = "add_to_phyloseq",
+      ...
+    )
+    list_args <- list_args[
+      names(list_args) %in%
+        names(formals("assign_blastn", envir = parent.frame()))
+    ]
+    new_physeq <- do.call(
+      assign_blastn,
+      args = list_args,
+      envir = parent.frame()
+    )
   }
 
   return(new_physeq)
 }
 ################################################################################
-
 
 ################################################################################
 #' Summarize information from sample data in a table
@@ -1928,11 +3236,13 @@ add_new_taxonomy_pq <- function(
 tbl_sum_samdata <- function(physeq, remove_col_unique_value = TRUE, ...) {
   tbl <- tibble(data.frame(physeq@sam_data))
   if (remove_col_unique_value) {
-    tbl <- tbl[, !apply(tbl, 2, function(x) {
-      length(unique(x)) == nrow(tbl) && is.character(x)
-    })]
+    tbl <- tbl[,
+      !apply(tbl, 2, function(x) {
+        length(unique(x)) == nrow(tbl) && is.character(x)
+      })
+    ]
   }
-  tbl_sum <- tbl %>% gtsummary::tbl_summary(...)
+  tbl_sum <- tbl |> gtsummary::tbl_summary(...)
   return(tbl_sum)
 }
 ################################################################################
@@ -2016,17 +3326,19 @@ tbl_sum_taxtable <- function(physeq, taxonomic_ranks = NULL, ...) {
 #'   use this function.
 #' @seealso [plot_guild_pq()]
 
-add_funguild_info <- function(physeq,
-                              taxLevels = c(
-                                "Kingdom",
-                                "Phylum",
-                                "Class",
-                                "Order",
-                                "Family",
-                                "Genus",
-                                "Species"
-                              ),
-                              db_url = "http://www.stbates.org/funguild_db_2.php") {
+add_funguild_info <- function(
+  physeq,
+  taxLevels = c(
+    "Kingdom",
+    "Phylum",
+    "Class",
+    "Order",
+    "Family",
+    "Genus",
+    "Species"
+  ),
+  db_url = "http://www.stbates.org/funguild_db_2.php"
+) {
   if (httr::http_error(db_url)) {
     message("error with db_url: ", db_url)
     return(NULL)
@@ -2034,12 +3346,16 @@ add_funguild_info <- function(physeq,
 
   tax_tab <- physeq@tax_table
   FUNGuild_assign <-
-    funguild_assign(data.frame(
-      "Taxonomy" =
-        apply(tax_tab[, taxLevels], 1, paste, collapse = ";")
-    ), db_url = db_url)
+    funguild_assign(
+      data.frame(
+        "Taxonomy" = apply(tax_tab[, taxLevels], 1, paste, collapse = ";")
+      ),
+      db_url = db_url
+    )
   if (is.null(FUNGuild_assign)) {
-    message("No http access to the funguild database. No information were added.")
+    message(
+      "No http access to the funguild database. No information were added."
+    )
     return(physeq)
   }
   tax_tab <-
@@ -2047,8 +3363,6 @@ add_funguild_info <- function(physeq,
   physeq@tax_table <- tax_table(tax_tab)
   return(physeq)
 }
-
-
 
 
 ################################################################################
@@ -2104,18 +3418,19 @@ add_funguild_info <- function(physeq,
 #' @seealso [add_funguild_info()]
 
 plot_guild_pq <-
-  function(physeq,
-           levels_order = NULL,
-           clean_pq = TRUE,
-           ...) {
+  function(physeq, levels_order = NULL, clean_pq = TRUE, ...) {
     if (clean_pq) {
       physeq <- clean_pq(physeq, ...)
     }
     guilds <-
       data.frame(sort(table(strsplit(
-        paste(physeq@tax_table[, "guild"]
-        [physeq@tax_table[, "confidenceRanking"] %in%
-            c("Highly Probable", "Probable")], collapse = "-"),
+        paste(
+          physeq@tax_table[, "guild"][
+            physeq@tax_table[, "confidenceRanking"] %in%
+              c("Highly Probable", "Probable")
+          ],
+          collapse = "-"
+        ),
         split = "-"
       ))))
 
@@ -2128,7 +3443,10 @@ plot_guild_pq <-
     nb_seq_by_guild <- vector("integer", length(guilds$Var1))
     for (i in seq_along(guilds$Var1)) {
       nb_seq_by_guild[i] <-
-        sum(taxa_sums(physeq@otu_table)[grepl(guilds$Var1[i], physeq@tax_table[, "guild"])])
+        sum(taxa_sums(physeq@otu_table)[grepl(
+          guilds$Var1[i],
+          physeq@tax_table[, "guild"]
+        )])
     }
     names(nb_seq_by_guild) <- guilds$Var1
     guilds$seq <- nb_seq_by_guild
@@ -2137,8 +3455,10 @@ plot_guild_pq <-
     guilds$nb_seq <- as.numeric(guilds$nb_seq)
     guilds$nb_taxa <- as.numeric(guilds$nb_taxa)
 
-    guilds$Guild <- factor(as.vector(guilds$Guild), levels = guilds$Guild[order(guilds$nb_seq)])
-
+    guilds$Guild <- factor(
+      as.vector(guilds$Guild),
+      levels = guilds$Guild[order(guilds$nb_seq)]
+    )
 
     COLORS <- rep("Others", nrow(guilds))
     COLORS[grepl("Sapro", guilds$Guild)] <- "Sapro"
@@ -2164,19 +3484,27 @@ plot_guild_pq <-
       guilds$Guild <- factor(guilds$Guild, levels = levels_order)
     }
 
-    ggplot(guilds, aes(
-      y = Guild,
-      x = log10(nb_seq),
-      fill = colors
-    )) +
+    ggplot(
+      guilds,
+      aes(
+        y = Guild,
+        x = log10(nb_seq),
+        fill = colors
+      )
+    ) +
       geom_bar(stat = "identity") +
       annotation_logticks(sides = "b", alpha = 0.5) +
       ylab("GUILD by FUNGuild") +
-      scale_fill_manual("Guild",
+      scale_fill_manual(
+        "Guild",
         values = c("gray", "Olivedrab", "cyan4", "tomato3", "lightpink4")
       ) +
-      geom_text(aes(label = nb_taxa, x = log10(nb_seq) + 0.2), family = "serif") +
-      geom_text(aes(label = nb_seq, x = log10(nb_seq) / 2),
+      geom_text(
+        aes(label = nb_taxa, x = log10(nb_seq) + 0.2),
+        family = "serif"
+      ) +
+      geom_text(
+        aes(label = nb_seq, x = log10(nb_seq) / 2),
         family = "mono",
         col = "white"
       )
@@ -2256,16 +3584,18 @@ plot_guild_pq <-
 #'   ps_tree <- merge_phyloseq(df, df_tree$ML$tree)
 #' }
 #' }
-build_phytree_pq <- function(physeq,
-                             nb_bootstrap = 0,
-                             model = "GTR",
-                             optInv = TRUE,
-                             optGamma = TRUE,
-                             rearrangement = "NNI",
-                             control = phangorn::pml.control(trace = 0),
-                             optNni = TRUE,
-                             multicore = FALSE,
-                             ...) {
+build_phytree_pq <- function(
+  physeq,
+  nb_bootstrap = 0,
+  model = "GTR",
+  optInv = TRUE,
+  optGamma = TRUE,
+  rearrangement = "NNI",
+  control = phangorn::pml.control(trace = 0),
+  optNni = TRUE,
+  multicore = FALSE,
+  ...
+) {
   seqs <- physeq@refseq
   alignment <-
     DECIPHER::AlignSeqs(Biostrings::DNAStringSet(seqs), anchor = NA)
@@ -2292,9 +3622,13 @@ build_phytree_pq <- function(physeq,
     )
   if (nb_bootstrap > 0) {
     treeUPGMA_bs <-
-      phangorn::bootstrap.phyDat(phang.align, function(x) {
-        phangorn::upgma(phangorn::dist.ml(x))
-      }, bs = nb_bootstrap)
+      phangorn::bootstrap.phyDat(
+        phang.align,
+        function(x) {
+          phangorn::upgma(phangorn::dist.ml(x))
+        },
+        bs = nb_bootstrap
+      )
     if (rearrangement == "NNI") {
       tree_ML_bs <- phangorn::bootstrap.pml(
         tree_ML,
@@ -2320,12 +3654,18 @@ build_phytree_pq <- function(physeq,
         ...
       )
     } else {
-      stop("rearrangement parameter one of the three value 'stochastic',
-       'NNI' or 'ratchet'")
+      stop(
+        "rearrangement parameter one of the three value 'stochastic',
+       'NNI' or 'ratchet'"
+      )
     }
-    treeNJ_bs <- phangorn::bootstrap.phyDat(phang.align, function(x) {
-      phangorn::NJ(phangorn::dist.ml(x))
-    }, bs = nb_bootstrap)
+    treeNJ_bs <- phangorn::bootstrap.phyDat(
+      phang.align,
+      function(x) {
+        phangorn::NJ(phangorn::dist.ml(x))
+      },
+      bs = nb_bootstrap
+    )
     return(
       list(
         "UPGMA" = treeUPGMA,
@@ -2372,11 +3712,31 @@ build_phytree_pq <- function(physeq,
 #' @examples
 #'
 #' are_modality_even_depth(data_fungi_mini, "Time")$p.value
-#' are_modality_even_depth(rarefy_even_depth(data_fungi_mini), "Time")$p.value
+#' are_modality_even_depth(rarefy_pq(data_fungi_mini, replace = TRUE), "Time")$p.value
 #' are_modality_even_depth(data_fungi_mini, "Height", boxplot = TRUE)
 are_modality_even_depth <- function(physeq, fact, boxplot = FALSE) {
   nb_seq <- sample_sums(physeq)
   fact <- factor(unclass(physeq@sam_data[, fact])[[1]])
+
+  if (nlevels(fact) < 2) {
+    message(
+      "Only one level in factor: no between-group comparison possible. ",
+      "Returning p.value = 1."
+    )
+    res <- list(
+      statistic = c("Kruskal-Wallis chi-squared" = NA_real_),
+      parameter = c(df = 0),
+      p.value = 1,
+      method = "Kruskal-Wallis rank sum test",
+      data.name = "nb_seq by fact"
+    )
+    class(res) <- "htest"
+    if (boxplot) {
+      boxplot(nb_seq ~ fact)
+    }
+    return(res)
+  }
+
   res <- kruskal.test(nb_seq ~ fact)
   if (boxplot) {
     boxplot(nb_seq ~ fact)
@@ -2388,7 +3748,6 @@ are_modality_even_depth <- function(physeq, fact, boxplot = FALSE) {
   return(res)
 }
 ################################################################################
-
 
 ################################################################################
 #' Reorder taxa in otu_table/tax_table/refseq slot of a phyloseq object
@@ -2412,8 +3771,10 @@ are_modality_even_depth <- function(physeq, fact, boxplot = FALSE) {
 #' @examples
 #'
 #' data_fungi_ordered_by_genus <- reorder_taxa_pq(
-#'   data_fungi,
-#'   taxa_names(data_fungi)[order(as.vector(data_fungi@tax_table[, "Genus"]))]
+#'   data_fungi_mini,
+#'   taxa_names(data_fungi_mini)[order(
+#'     as.vector(data_fungi_mini@tax_table[, "Genus"])
+#'   )]
 #' )
 #'
 #' data_fungi_mini_asc_ordered_by_abundance <- reorder_taxa_pq(
@@ -2499,10 +3860,12 @@ reorder_taxa_pq <- function(physeq, names_ordered, remove_phy_tree = FALSE) {
 #' plot(data_fungi@sam_data$nb_otu ~ data_fungi@sam_data$variable_1)
 #' @author Adrien Taudière
 
-add_info_to_sam_data <- function(physeq,
-                                 df_info = NULL,
-                                 add_nb_seq = TRUE,
-                                 add_nb_otu = TRUE) {
+add_info_to_sam_data <- function(
+  physeq,
+  df_info = NULL,
+  add_nb_seq = TRUE,
+  add_nb_otu = TRUE
+) {
   if (add_nb_seq) {
     physeq@sam_data$nb_seq <- sample_sums(physeq)
   }
@@ -2513,14 +3876,17 @@ add_info_to_sam_data <- function(physeq,
     if (sum(sample_names(physeq) %in% rownames(df_info)) == 0) {
       stop("Rownames of df_info must match the sample names of physeq.")
     }
-    df_info <-
-      df_info[match(sample_names(physeq), rownames(df_info)), ]
-    physeq@sam_data <- sample_data(cbind(as.data.frame(physeq@sam_data), df_info))
+    df_info_ord <-
+      df_info[match(sample_names(physeq), rownames(df_info)), , drop = FALSE]
+
+    new_sam_data <-
+      sample_data(cbind(as.data.frame(physeq@sam_data), df_info_ord))
+    colnames(new_sam_data) <- c(sample_variables(physeq), colnames(df_info_ord))
+    physeq@sam_data <- new_sam_data
   }
   return(physeq)
 }
 ################################################################################
-
 
 ###############################################################################
 #' Return a DNAStringSet object from either a character vector of DNA sequences
@@ -2576,6 +3942,8 @@ physeq_or_string_to_dna <- function(physeq = NULL, dna_seq = NULL) {
     }
   } else if (inherits(dna_seq, "character")) {
     dna <- Biostrings::DNAStringSet(dna_seq)
+  } else if (inherits(dna_seq, "DNAStringSet")) {
+    return(dna)
   } else {
     stop(
       "You must set the args physeq (object of class phyloseq) or
@@ -2585,8 +3953,6 @@ physeq_or_string_to_dna <- function(physeq = NULL, dna_seq = NULL) {
   return(dna)
 }
 ###############################################################################
-
-
 
 ################################################################################
 #' Remove primers using [cutadapt](https://github.com/marcelm/cutadapt/)
@@ -2614,8 +3980,17 @@ physeq_or_string_to_dna <- function(physeq = NULL, dna_seq = NULL) {
 #' @param return_file_path (logical, default FALSE) If true, the function
 #'   return the path of the output folder (param `folder_output`). Useful
 #'   in targets workflow
+#' @param cutadapt_args (default: "") A character string of additional arguments
+#'   passed directly to cutadapt. For example, use `"-e 0.01"` to set the
+#'   maximum error rate to 1% (the cutadapt default is 10%). See the
+#'   [cutadapt search parameters documentation](https://cutadapt.readthedocs.io/en/stable/guide.html#search-parameters)
+#'   for available options.
 #' @param args_before_cutadapt (String) A one line bash command to run before
 #' to run cutadapt. For examples, "source ~/miniconda3/etc/profile.d/conda.sh && conda activate cutadaptenv &&" allow to bypass the conda init which asks to restart the shell
+#' @param verbose (logical, default TRUE) If FALSE, suppresses all output from
+#'   the cutadapt command (stdout and stderr) as well as the completion message.
+#'   Note: standard R suppression functions (`suppressMessages`, `capture.output`)
+#'   cannot silence system command output; use this parameter instead.
 #'
 #' @return a list of command or if `return_file_path` is TRUE, the path to
 #'   the output folder
@@ -2651,29 +4026,41 @@ physeq_or_string_to_dna <- function(physeq = NULL, dna_seq = NULL) {
 #'   cmd_is_run = FALSE
 #' )
 #'
+#' # Use a stricter error rate (1%) instead of the cutadapt default (10%)
+#' cutadapt_remove_primers(
+#'   system.file("extdata", package = "MiscMetabar"),
+#'   "TTC",
+#'   "GAA",
+#'   folder_output = tempdir(),
+#'   cutadapt_args = "-e 0.01",
+#'   cmd_is_run = FALSE
+#' )
+#'
 #' unlink(tempdir(), recursive = TRUE)
 #' }
 #' @details
 #' This function is mainly a wrapper of the work of others.
 #'   Please cite cutadapt (\doi{doi:10.14806/ej.17.1.200}).
 
-
-cutadapt_remove_primers <- function(path_to_fastq,
-                                    primer_fw = NULL,
-                                    primer_rev = NULL,
-                                    folder_output = "wo_primers",
-                                    nproc = 1,
-                                    pattern = "fastq.gz",
-                                    pattern_R1 = "_R1",
-                                    pattern_R2 = "_R2",
-                                    nb_files = Inf,
-                                    cmd_is_run = TRUE,
-                                    return_file_path = FALSE,
-                                    args_before_cutadapt = "source ~/miniconda3/etc/profile.d/conda.sh && conda activate cutadaptenv && ") {
+cutadapt_remove_primers <- function(
+  path_to_fastq,
+  primer_fw = NULL,
+  primer_rev = NULL,
+  folder_output = "wo_primers",
+  nproc = 1,
+  pattern = "fastq.gz",
+  pattern_R1 = "_R1",
+  pattern_R2 = "_R2",
+  nb_files = Inf,
+  cmd_is_run = TRUE,
+  return_file_path = FALSE,
+  cutadapt_args = "",
+  args_before_cutadapt = "source ~/miniconda3/etc/profile.d/conda.sh && conda activate cutadaptenv && ",
+  verbose = TRUE
+) {
   if (!dir.exists(folder_output)) {
     dir.create(folder_output)
   }
-
 
   if (is.null(primer_rev)) {
     lff <- list_fastq_files(
@@ -2692,6 +4079,8 @@ cutadapt_remove_primers <- function(path_to_fastq,
           args_before_cutadapt,
           "cutadapt --cores=",
           nproc,
+          " ",
+          cutadapt_args,
           " --json=",
           folder_output,
           "/",
@@ -2728,6 +4117,8 @@ cutadapt_remove_primers <- function(path_to_fastq,
           args_before_cutadapt,
           "cutadapt -n 2 --cores=",
           nproc,
+          " ",
+          cutadapt_args,
           " --json=",
           folder_output,
           "/",
@@ -2759,11 +4150,20 @@ cutadapt_remove_primers <- function(path_to_fastq,
   }
   if (cmd_is_run) {
     writeLines(unlist(cmd), paste0(tempdir(), "/script_cutadapt.sh"))
-    system2("bash", paste0(tempdir(), "/script_cutadapt.sh"))
-    message(paste0(
-      "Output files are available in the folder ",
-      normalizePath(folder_output)
-    ))
+    if (verbose) {
+      system2("bash", paste0(tempdir(), "/script_cutadapt.sh"))
+      message(paste0(
+        "Output files are available in the folder ",
+        normalizePath(folder_output)
+      ))
+    } else {
+      system2(
+        "bash",
+        paste0(tempdir(), "/script_cutadapt.sh"),
+        stdout = FALSE,
+        stderr = FALSE
+      )
+    }
     unlink(paste0(tempdir(), "/script_cutadapt.sh"))
   }
   if (return_file_path) {
@@ -2803,6 +4203,7 @@ cutadapt_remove_primers <- function(path_to_fastq,
 #' )
 #' taxa_only_in_one_level(data_fungi_mini_woNA4height, "Height", "High")
 #' #' # Taxa present only in low height samples
+#' \donttest{
 #' suppressMessages(suppressWarnings(
 #'   taxa_only_in_one_level(data_fungi, "Height", "Low")
 #' ))
@@ -2810,11 +4211,14 @@ cutadapt_remove_primers <- function(path_to_fastq,
 #' suppressMessages(suppressWarnings(
 #'   length(taxa_only_in_one_level(data_fungi, "Time", "15"))
 #' ))
-taxa_only_in_one_level <- function(physeq,
-                                   modality,
-                                   level,
-                                   min_nb_seq_taxa = 0,
-                                   min_nb_samples_taxa = 0) {
+#' }
+taxa_only_in_one_level <- function(
+  physeq,
+  modality,
+  level,
+  min_nb_seq_taxa = 0,
+  min_nb_samples_taxa = 0
+) {
   if (min_nb_seq_taxa > 0) {
     physeq <-
       subset_taxa_pq(physeq, taxa_sums(physeq) >= min_nb_seq_taxa)
@@ -2830,8 +4234,10 @@ taxa_only_in_one_level <- function(physeq,
   physeq_merged <- clean_pq(merge_samples2(physeq, modality))
 
   physeq_merged_only_one_level <-
-    subset_taxa_pq(physeq_merged, taxa_sums(as_binary_otu_table(physeq_merged)) ==
-      1)
+    subset_taxa_pq(
+      physeq_merged,
+      taxa_sums(as_binary_otu_table(physeq_merged)) == 1
+    )
   physeq_merged_only_level_given <-
     clean_pq(subset_samples_pq(
       physeq_merged_only_one_level,
@@ -2841,68 +4247,9 @@ taxa_only_in_one_level <- function(physeq,
 }
 ################################################################################
 
-
 ################################################################################
-#' Normalize OTU table using samples depth
-#' @description
-#'
-#' <a href="https://adrientaudiere.github.io/MiscMetabar/articles/Rules.html#lifecycle">
-#' <img src="https://img.shields.io/badge/lifecycle-experimental-orange" alt="lifecycle-experimental"></a>
-#'
-#'   This function implement the method proposed by
-#'   McKnight et al. 2018 (\doi{doi:10.5061/dryad.tn8qs35})
-#'
-#' @inheritParams clean_pq
-#'
-#' @param base_log (integer, default 2) the base for log-transformation. If
-#'   set to NULL or NA, no log-transformation is compute after normalization.
-#' @param constante a constante to multiply the otu_table values
-#' @param digits (default = 2) integer indicating the number of decimal places
-#'   to be used (see `?round` for more information)
-#'
-#' @return A new \code{\link[phyloseq]{phyloseq-class}} object with otu_table count
-#'   normalize and log transformed (if base_log is an integer)
-#' @export
-#' @author Adrien Taudière
-#' @examples
-#' taxa_sums(data_fungi_mini)
-#' data_f_norm <- normalize_prop_pq(data_fungi_mini)
-#' taxa_sums(data_f_norm)
-#' ggplot(data.frame(
-#'   "norm" = scale(taxa_sums(data_f_norm)),
-#'   "raw" = scale(taxa_sums(data_fungi_mini)),
-#'   "name_otu" = taxa_names(data_f_norm)
-#' )) +
-#'   geom_point(aes(x = raw, y = norm))
-#'
-#' data_f_norm <- normalize_prop_pq(data_fungi_mini, base_log = NULL)
-normalize_prop_pq <- function(physeq,
-                              base_log = 2,
-                              constante = 10000,
-                              digits = 4) {
-  verify_pq(physeq)
-  if (taxa_are_rows(physeq)) {
-    new_otutab <- round((apply(physeq@otu_table, 2, function(x) {
-      x / sum(x)
-    })) * constante, digits = digits)
-  } else {
-    new_otutab <- round((apply(physeq@otu_table, 1, function(x) {
-      x / sum(x)
-    })) * constante, digits = digits)
-  }
-
-  if (!is.null(base_log) && !is.na(base_log)) {
-    new_otutab <- round(log(new_otutab + 1, base = base_log), digits = digits)
-  }
-
-  new_physeq <- physeq
-  new_physeq@otu_table <- otu_table(new_otutab, taxa_are_rows = taxa_are_rows(physeq))
-
-  return(new_physeq)
-}
+# normalize_prop_pq() has been moved to R/normalize_pq.R
 ################################################################################
-
-
 
 ################################################################################
 #' Build a sample information tibble from physeq object
@@ -2920,44 +4267,109 @@ normalize_prop_pq <- function(physeq,
 #'   You may use rarefy_by_sample = TRUE if the mean number of sequences per
 #'   samples differs among modalities.
 #' @inheritParams clean_pq
-#' @param hill_scales (a vector of integer) The list of q values to compute
-#'   the hill number H^q. If Null, no hill number are computed. Default value
-#'   compute the Hill number 0 (Species richness), the Hill number 1
-#'   (exponential of Shannon Index) and the Hill number 2 (inverse of Simpson
-#'   Index).
+#' @param q (numeric vector) Hill diversity orders to compute. If NULL, no
+#'   Hill numbers are computed. Default computes Hill number 0 (species
+#'   richness), 1 (exponential of Shannon index) and 2 (inverse of Simpson
+#'   index). Formerly `q`. Hill numbers are more appropriate in DNA
+#'   metabarcoding studies when `q > 0` (Alberdi & Gilbert, 2019;
+#'   Calderón-Sanou et al., 2019).
+#' @param hill_scales `r lifecycle::badge("deprecated")` Use `q` instead.
 #' @param filter_zero (logical, default TRUE) Do we filter non present OTU from
 #'   samples ? For the moment, this has no effect on the result because the dataframe
 #'   is grouped by samples with abundance summed across OTU.
 #' @param rarefy_by_sample (logical, default FALSE) If TRUE, rarefy
 #'   samples using [phyloseq::rarefy_even_depth()] function.
+#' @param rngseed (Optional). A single integer value passed to
+#'   [phyloseq::rarefy_even_depth()], which is used to fix a seed for
+#'   reproducibly random number generation (in this case, reproducibly
+#'   random subsampling). If set to FALSE, then no fiddling with the RNG seed
+#'   is performed, and it is up to the user to appropriately call set.seed
+#'   beforehand to achieve reproducible results. Default is FALSE.
+#' @param verbose (logical). If TRUE, print additional information.
 #' @param taxa_ranks A vector of taxonomic ranks. For examples c("Family","Genus").
 #'   If taxa ranks is not set (default value = NULL), taxonomic information are not
 #'   present in the resulting tibble.
+#' @param ... Additional arguments passed to [divent_hill_matrix_pq()] and
+#'   hence to [divent::div_hill()] (e.g. `estimator = "naive"`). Only used
+#'   when `q` is not NULL.
 #' @author Adrien Taudière
 #' @export
 #' @return A tibble with a row for each sample. Columns provide information
 #'   from `sam_data` slot as well as hill numbers, Abundance (nb of sequences),
 #'   and Abundance_log10 (*log10(1+Abundance)*).
+#' @references
+#' Alberdi, A., & Gilbert, M. T. P. (2019). A guide to the application of
+#'   Hill numbers to DNA-based diversity analyses. *Molecular Ecology Resources*.
+#'   \doi{10.1111/1755-0998.13014}
+#'
+#' Calderón-Sanou, I., Münkemüller, T., Boyer, F., Zinger, L., & Thuiller, W.
+#'   (2019). From environmental DNA sequences to ecological conclusions: How
+#'   strong is the influence of methodological choices? *Journal of Biogeography*,
+#'   47. \doi{10.1111/jbi.13681}
 #' @examples
+#' \donttest{
+#' psm_tib <- psmelt_samples_pq(data_fungi_mini, hill_scales = c(0, 2, 7))
+#' }
+#' \dontrun{
 #' if (requireNamespace("ggstatsplot")) {
-#'   psm_tib <- psmelt_samples_pq(data_fungi_mini, hill_scales = c(0, 2, 7))
 #'   ggstatsplot::ggbetweenstats(psm_tib, Height, Hill_0)
 #'   ggstatsplot::ggbetweenstats(psm_tib, Height, Hill_7)
-#'
-#'   psm_tib_tax <- psmelt_samples_pq(data_fungi_mini, taxa_ranks = c("Class", "Family"))
-#'   ggplot(filter(psm_tib_tax, Abundance > 2000), aes(y = Family, x = Abundance, fill = Time)) +
-#'     geom_bar(stat = "identity") +
-#'     facet_wrap(~Height)
+#' }
+#' psm_tib_tax <- psmelt_samples_pq(data_fungi_mini, taxa_ranks = c("Class", "Family"))
+#' ggplot(filter(psm_tib_tax, Abundance > 2000), aes(y = Family, x = Abundance, fill = Time)) +
+#'   geom_bar(stat = "identity") +
+#'   facet_wrap(~Height)
 #' }
 psmelt_samples_pq <-
-  function(physeq,
-           hill_scales = c(0, 1, 2),
-           filter_zero = TRUE,
-           rarefy_by_sample = FALSE,
-           taxa_ranks = NULL) {
+  function(
+    physeq,
+    q = c(0, 1, 2),
+    hill_scales = lifecycle::deprecated(),
+    filter_zero = TRUE,
+    rarefy_by_sample = FALSE,
+    rngseed = FALSE,
+    verbose = TRUE,
+    taxa_ranks = NULL,
+    ...
+  ) {
+    if (lifecycle::is_present(hill_scales)) {
+      lifecycle::deprecate_warn(
+        "0.15.1",
+        "psmelt_samples_pq(hill_scales=)",
+        "psmelt_samples_pq(q=)"
+      )
+      q <- hill_scales
+    }
     verify_pq(physeq)
     if (rarefy_by_sample) {
-      physeq <- rarefy_even_depth(physeq)
+      if (as(rngseed, "logical")) {
+        set.seed(rngseed)
+        if (verbose) {
+          message(
+            "`set.seed(",
+            rngseed,
+            ")` was used to initialize repeatable random subsampling."
+          )
+          message(
+            "Please record this for your records so others can reproduce."
+          )
+          message(
+            "Try `set.seed(",
+            rngseed,
+            "); .Random.seed` for the full vector",
+            sep = ""
+          )
+          message("...")
+        }
+      } else if (verbose) {
+        message(
+          "You set `rngseed` to FALSE. Make sure you've set & recorded\n",
+          " the random seed of your session for reproducibility.\n",
+          "See `?set.seed`\n"
+        )
+        message("...")
+      }
+      physeq <- rarefy_even_depth_pq(physeq, rngseed = rngseed)
     }
     psm <- psmelt(physeq)
     if (filter_zero) {
@@ -2995,9 +4407,12 @@ psmelt_samples_pq <-
         group_by(Sample) |>
         summarise(
           Abundance = sum(Abundance),
-          across(where(is.numeric) &
-            !Abundance, ~ mean(.x, na.rm = TRUE)),
-          across(where(is.character), ~ .x[1])
+          across(
+            where(is.numeric) &
+              !Abundance,
+            ~ mean(.x, na.rm = TRUE)
+          ),
+          across(where(is.character) | where(is.factor), ~ as.character(.x[1]))
         )
     } else {
       psm_temp <- psm |>
@@ -3012,19 +4427,24 @@ psmelt_samples_pq <-
       psm_samp <- psm_temp |>
         summarise(
           Abundance = sum(Abundance),
-          across(where(is.numeric) &
-            !Abundance, ~ mean(.x, na.rm = TRUE)),
-          across(where(is.character), ~ .x[1]),
+          across(
+            where(is.numeric) &
+              !Abundance,
+            ~ mean(.x, na.rm = TRUE)
+          ),
+          across(where(is.character) | where(is.factor), ~ as.character(.x[1])),
           .groups = "drop"
         )
     }
 
-    if (!is.null(hill_scales)) {
+    if (!is.null(q)) {
       physeq <- taxa_as_rows(physeq)
-      df_hill <-
-        vegan::renyi(t(physeq)@otu_table, scales = hill_scales, hill = TRUE)
-
-      colnames(df_hill) <- paste0("Hill_", hill_scales)
+      df_hill <- divent_hill_matrix_pq(
+        as.data.frame(t(as.matrix(physeq@otu_table))),
+        q = q,
+        ...
+      )
+      colnames(df_hill) <- paste0("Hill_", q)
       df_hill$Sample <- rownames(df_hill)
 
       psm_samp <- full_join(psm_samp, df_hill)
@@ -3049,6 +4469,8 @@ psmelt_samples_pq <-
 #' @author Adrien Taudière
 #' @export
 #' @return A new \code{\link[phyloseq]{phyloseq-class}} object
+#' @examples
+#' taxa_as_columns(data_fungi_mini)
 taxa_as_columns <- function(physeq) {
   physeq <- clean_pq(
     physeq,
@@ -3076,6 +4498,8 @@ taxa_as_columns <- function(physeq) {
 #' @author Adrien Taudière
 #' @export
 #' @return A new \code{\link[phyloseq]{phyloseq-class}} object
+#' @examples
+#' taxa_as_rows(data_fungi_mini)
 taxa_as_rows <- function(physeq) {
   physeq <- clean_pq(
     physeq,
@@ -3121,10 +4545,7 @@ taxa_as_rows <- function(physeq) {
 #'   ggvenn_pq(data_fungi_mini, "Height") + ggvenn_pq(data_fungi_mini2, "Height")
 #' }
 rarefy_sample_count_by_modality <-
-  function(physeq,
-           fact,
-           rngseed = FALSE,
-           verbose = TRUE) {
+  function(physeq, fact, rngseed = FALSE, verbose = TRUE) {
     if (as(rngseed, "logical")) {
       set.seed(rngseed)
       if (verbose) {
@@ -3134,12 +4555,12 @@ rarefy_sample_count_by_modality <-
           ")` was used to initialize repeatable random subsampling."
         )
         message("Please record this for your records so others can reproduce.")
-        message("Try `set.seed(",
+        message(
+          "Try `set.seed(",
           rngseed,
           "); .Random.seed` for the full vector",
           sep = ""
         )
-        message("...")
       }
     } else if (verbose) {
       message(
@@ -3186,7 +4607,6 @@ rarefy_sample_count_by_modality <-
     return(new_physeq)
   }
 ################################################################################
-
 
 ################################################################################
 #' A wrapper of \code{\link[DECIPHER]{IdTaxa}}
@@ -3276,28 +4696,32 @@ rarefy_sample_count_by_modality <-
 #' This function is mainly a wrapper of the work of others.
 #'   Please make a reference to [DECIPHER::IdTaxa()] if you
 #'   use this function.
-assign_idtaxa <- function(physeq,
-                          trainingSet = NULL,
-                          seq2search = NULL,
-                          fasta_for_training = NULL,
-                          behavior = "return_matrix",
-                          threshold = 60,
-                          column_names = c(
-                            "Kingdom",
-                            "Phylum",
-                            "Class",
-                            "Order",
-                            "Family",
-                            "Genus",
-                            "Species"
-                          ),
-                          suffix = "_idtaxa",
-                          nproc = 1,
-                          unite = FALSE,
-                          verbose = TRUE,
-                          ...) {
+assign_idtaxa <- function(
+  physeq,
+  trainingSet = NULL,
+  seq2search = NULL,
+  fasta_for_training = NULL,
+  behavior = "return_matrix",
+  threshold = 60,
+  column_names = c(
+    "Kingdom",
+    "Phylum",
+    "Class",
+    "Order",
+    "Family",
+    "Genus",
+    "Species"
+  ),
+  suffix = "_idtaxa",
+  nproc = 1,
+  unite = FALSE,
+  verbose = TRUE,
+  ...
+) {
   if (!is.null(trainingSet) && !is.null(fasta_for_training)) {
-    stop("Please provide either trainingSet or fasta_for_training parameters, not both.")
+    stop(
+      "Please provide either trainingSet or fasta_for_training parameters, not both."
+    )
   } else if (is.null(trainingSet) && is.null(fasta_for_training)) {
     stop("Please provide either trainingSet or fasta_for_training parameters.")
   } else if (is.null(trainingSet) && !is.null(fasta_for_training)) {
@@ -3315,7 +4739,9 @@ assign_idtaxa <- function(physeq,
     return_DNAStringSet = TRUE
   )
 
-  fasta2search <- DECIPHER::OrientNucleotides(DECIPHER::RemoveGaps(fasta2search))
+  fasta2search <- DECIPHER::OrientNucleotides(DECIPHER::RemoveGaps(
+    fasta2search
+  ))
 
   if (verbose) {
     message("Classifing using training Set with IdTaxa.")
@@ -3332,18 +4758,24 @@ assign_idtaxa <- function(physeq,
   idtaxa_taxa_df <- sapply(
     idtaxa_taxa_test,
     function(x) {
-      paste(x$taxon,
-        collapse = ";"
-      )
+      paste(x$taxon, collapse = ";")
     }
   )
 
-  col2add <- max(stringr::str_count(idtaxa_taxa_df, ";")) - stringr::str_count(idtaxa_taxa_df, ";")
+  col2add <- max(stringr::str_count(idtaxa_taxa_df, ";")) -
+    stringr::str_count(idtaxa_taxa_df, ";")
   for (i in seq_along(idtaxa_taxa_df)) {
     idtaxa_taxa_df[i] <-
-      paste0(idtaxa_taxa_df[i], paste(as.character(rep(";", each = col2add[i])), collapse = ""))
+      paste0(
+        idtaxa_taxa_df[i],
+        paste(as.character(rep(";", each = col2add[i])), collapse = "")
+      )
   }
-  t_idtaxa <- tibble::tibble(data.frame(stringr::str_split_fixed(idtaxa_taxa_df, ";", max(stringr::str_count(idtaxa_taxa_df, ";")) + 1)))[, -1]
+  t_idtaxa <- tibble::tibble(data.frame(stringr::str_split_fixed(
+    idtaxa_taxa_df,
+    ";",
+    max(stringr::str_count(idtaxa_taxa_df, ";")) + 1
+  )))[, -1]
 
   column_names <- paste0(column_names, suffix)
   colnames(t_idtaxa) <- column_names
@@ -3360,9 +4792,7 @@ assign_idtaxa <- function(physeq,
 
     new_physeq <- physeq
 
-    new_tax_tab <- left_join(tax_tab, t_idtaxa,
-      by = join_by(taxa_names)
-    ) |>
+    new_tax_tab <- left_join(tax_tab, t_idtaxa, by = join_by(taxa_names)) |>
       dplyr::select(-taxa_names) |>
       as.matrix()
 
@@ -3371,7 +4801,9 @@ assign_idtaxa <- function(physeq,
 
     return(new_physeq)
   } else {
-    stop("Param behavior must take either 'return_matrix' or 'add_to_phyloseq' value")
+    stop(
+      "Param behavior must take either 'return_matrix' or 'add_to_phyloseq' value"
+    )
   }
 }
 ################################################################################
@@ -3437,7 +4869,13 @@ assign_idtaxa <- function(physeq,
 #' This function is mainly a wrapper of the work of others.
 #'   Please make a reference to [DECIPHER::LearnTaxa()] if you
 #'   use this function.
-learn_idtaxa <- function(fasta_for_training, output_Rdata = NULL, output_path_only = FALSE, unite = FALSE, ...) {
+learn_idtaxa <- function(
+  fasta_for_training,
+  output_Rdata = NULL,
+  output_path_only = FALSE,
+  unite = FALSE,
+  ...
+) {
   seqs <- Biostrings::readDNAStringSet(fasta_for_training)
   seqs <- DECIPHER::RemoveGaps(seqs)
   seqs <- DECIPHER::OrientNucleotides(seqs)
@@ -3445,17 +4883,29 @@ learn_idtaxa <- function(fasta_for_training, output_Rdata = NULL, output_path_on
   taxo_for_learning <- names(seqs)
   if (unite) {
     taxo_for_learning <- gsub("(.*)(FU|reps)", "Root;", taxo_for_learning)
-    taxo_for_learning <- gsub("(.*)(FU|reps_singleton)", "Root;", taxo_for_learning)
-    taxo_for_learning <- gsub("(.*)(FU|refs_singleton)", "Root;", taxo_for_learning)
+    taxo_for_learning <- gsub(
+      "(.*)(FU|reps_singleton)",
+      "Root;",
+      taxo_for_learning
+    )
+    taxo_for_learning <- gsub(
+      "(.*)(FU|refs_singleton)",
+      "Root;",
+      taxo_for_learning
+    )
     taxo_for_learning <- gsub("(.*)(FU|refs)", "Root;", taxo_for_learning)
     taxo_for_learning <- gsub("|", "", taxo_for_learning, fixed = TRUE)
   }
   taxo_for_learning <-
-    gsub(",", ";", gsub(
-      ";tax=",
-      "Root;",
-      gsub("(.*)(;tax=)", "\\2", taxo_for_learning)
-    )) # extract the group label
+    gsub(
+      ",",
+      ";",
+      gsub(
+        ";tax=",
+        "Root;",
+        gsub("(.*)(;tax=)", "\\2", taxo_for_learning)
+      )
+    ) # extract the group label
 
   taxo_for_learning[!grepl("^Root;", taxo_for_learning)] <-
     paste0("Root;", taxo_for_learning[!grepl("^Root;", taxo_for_learning)])
@@ -3474,7 +4924,6 @@ learn_idtaxa <- function(fasta_for_training, output_Rdata = NULL, output_path_on
   }
 }
 ################################################################################
-
 
 ################################################################################
 
@@ -3531,24 +4980,31 @@ learn_idtaxa <- function(fasta_for_training, output_Rdata = NULL, output_path_on
 #'   from_sintax = TRUE
 #' )
 #' }
-assign_dada2 <- function(physeq = NULL,
-                         ref_fasta = NULL,
-                         seq2search = NULL,
-                         min_bootstrap = 0.5,
-                         tryRC = FALSE,
-                         taxa_ranks = c(
-                           "Kingdom",
-                           "Phylum", "Class", "Order", "Family",
-                           "Genus", "Species", "taxId"
-                         ),
-                         use_assignSpecies = TRUE,
-                         trunc_absent_ranks = FALSE,
-                         nproc = 1,
-                         suffix = "",
-                         verbose = TRUE,
-                         seq_at_one_time = 2000,
-                         allowMultiple = FALSE,
-                         from_sintax = FALSE) {
+assign_dada2 <- function(
+  physeq = NULL,
+  ref_fasta = NULL,
+  seq2search = NULL,
+  min_bootstrap = 0.5,
+  tryRC = FALSE,
+  taxa_ranks = c(
+    "Kingdom",
+    "Phylum",
+    "Class",
+    "Order",
+    "Family",
+    "Genus",
+    "Species",
+    "taxId"
+  ),
+  use_assignSpecies = TRUE,
+  trunc_absent_ranks = FALSE,
+  nproc = 1,
+  suffix = "",
+  verbose = TRUE,
+  seq_at_one_time = 2000,
+  allowMultiple = FALSE,
+  from_sintax = FALSE
+) {
   if (is.null(physeq)) {
     if (is.null(seq2search)) {
       stop("You must specify either physeq or seq2search args.")
@@ -3557,13 +5013,22 @@ assign_dada2 <- function(physeq = NULL,
     verify_pq(physeq)
     seq2search <- physeq@refseq
   }
+  if (!from_sintax) {
+    if (.detect_tax_format(ref_fasta) != "unite") {
+      .validate_ref_format(ref_fasta, "dada2", "assign_dada2")
+    }
+  }
+
   if (from_sintax) {
-    Biostrings::writeXStringSet(format2dada2(fasta_db = ref_fasta), "temp_taxo.fasta")
+    Biostrings::writeXStringSet(
+      format2dada2(fasta_db = ref_fasta),
+      "temp_taxo.fasta"
+    )
     ref_fasta_taxo <- "temp_taxo.fasta"
   } else {
     ref_fasta_taxo <- ref_fasta
   }
-  taxtab <- assignTaxonomy(
+  taxtab <- dada2::assignTaxonomy(
     seqs = seq2search,
     refFasta = ref_fasta_taxo,
     taxLevels = taxa_ranks,
@@ -3578,9 +5043,12 @@ assign_dada2 <- function(physeq = NULL,
   rownames(taxtab) <- names(seq2search)
 
   if (use_assignSpecies) {
-    Biostrings::writeXStringSet(format2dada2_species(fasta_db = ref_fasta), "temp_species.fasta")
+    Biostrings::writeXStringSet(
+      format2dada2_species(fasta_db = ref_fasta),
+      "temp_species.fasta"
+    )
 
-    GS <- assignSpecies(
+    GS <- dada2::assignSpecies(
       seqs = seq2search,
       refFasta = "temp_species.fasta",
       allowMultiple = allowMultiple,
@@ -3588,10 +5056,8 @@ assign_dada2 <- function(physeq = NULL,
       tryRC = tryRC
     )
 
-    taxtab$Species <- as.vector(paste(GS[, 1], GS[, 2], sep = "_")) %>%
-      {
-        gsub("NA_NA", NA, .)
-      }
+    taxtab$Species <- as.vector(paste(GS[, 1], GS[, 2], sep = "_")) |>
+      (\(x) gsub("NA_NA", NA, x))()
 
     unlink("temp_species.fasta")
   }
@@ -3616,9 +5082,7 @@ assign_dada2 <- function(physeq = NULL,
     taxtab$taxa_names <- rownames(taxtab)
 
     new_physeq <- physeq
-    new_tax_tab <- left_join(tax_tab, taxtab,
-      by = join_by(taxa_names)
-    ) |>
+    new_tax_tab <- left_join(tax_tab, taxtab, by = join_by(taxa_names)) |>
       dplyr::select(-taxa_names) |>
       as.matrix()
     new_physeq@tax_table <- tax_table(new_tax_tab)
@@ -3628,7 +5092,6 @@ assign_dada2 <- function(physeq = NULL,
   }
 }
 ################################################################################
-
 
 ################################################################################
 #' Filter taxa by cleaning taxa with NA at given taxonomic rank(s)
@@ -3670,12 +5133,14 @@ assign_dada2 <- function(physeq = NULL,
 #'   taxa_ranks = c("Trait", "Confidence.Ranking"),
 #'   NA_equivalent = c("-", "NULL")
 #' )
-filt_taxa_wo_NA <- function(physeq,
-                            taxa_ranks = NULL,
-                            n_NA = 0,
-                            verbose = TRUE,
-                            NA_equivalent = NULL,
-                            clean_pq = TRUE) {
+filt_taxa_wo_NA <- function(
+  physeq,
+  taxa_ranks = NULL,
+  n_NA = 0,
+  verbose = TRUE,
+  NA_equivalent = NULL,
+  clean_pq = TRUE
+) {
   verify_pq(physeq)
   new_physeq <- physeq
 
@@ -3691,7 +5156,11 @@ filt_taxa_wo_NA <- function(physeq,
   }
 
   cond <- rowSums(is.na(taxtab))
-  new_physeq <- subset_taxa_pq(new_physeq, cond < (n_NA + 1), clean_pq = clean_pq)
+  new_physeq <- subset_taxa_pq(
+    new_physeq,
+    cond < (n_NA + 1),
+    clean_pq = clean_pq
+  )
 
   if (verbose) {
     message(

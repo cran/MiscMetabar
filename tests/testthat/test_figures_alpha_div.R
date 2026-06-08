@@ -1,5 +1,7 @@
+skip_on_cran()
 data("GlobalPatterns", package = "phyloseq")
 data("enterotype", package = "phyloseq")
+library("divent")
 
 GP <- GlobalPatterns
 data_fungi_2trees <-
@@ -9,17 +11,26 @@ data_fungi_2trees <-
   )
 GP_archae <-
   subset_taxa(GlobalPatterns, GlobalPatterns@tax_table[, 1] == "Archaea")
-GP_archae <- clean_pq(rarefy_even_depth(subset_samples_pq(GP_archae, sample_sums(GP_archae) > 1000)))
+GP_archae <- clean_pq(rarefy_pq(
+  subset_samples_pq(GP_archae, sample_sums(GP_archae) > 1000),
+  replace = TRUE
+))
 data_basidio <- subset_taxa(data_fungi, Phylum == "Basidiomycota")
 
 test_that("hill_pq works with data_fungi dataset", {
   expect_silent(suppressMessages(hill_pq(data_fungi_mini, "Height")))
   skip_on_cran()
-  expect_silent(suppressMessages(hill_pq(data_fungi_mini, "Height", add_points = TRUE)))
+  expect_silent(suppressMessages(hill_pq(
+    data_fungi_mini,
+    "Height",
+    add_points = TRUE
+  )))
   expect_silent(suppressMessages(hill_pq(
     clean_pq(subset_samples_pq(
-      data_fungi_mini, !is.na(data_fungi_mini@sam_data$Height)
-    )), "Height",
+      data_fungi_mini,
+      !is.na(data_fungi_mini@sam_data$Height)
+    )),
+    "Height",
     letters = TRUE
   )))
   expect_silent(suppressMessages(
@@ -45,7 +56,8 @@ test_that("hill_pq works with data_fungi dataset", {
   expect_silent(suppressWarnings(suppressMessages(
     hill_pq(
       clean_pq(subset_samples_pq(
-        data_fungi_mini, !is.na(data_fungi_mini@sam_data$Height)
+        data_fungi_mini,
+        !is.na(data_fungi_mini@sam_data$Height)
       )),
       "Height",
       add_points = TRUE,
@@ -55,8 +67,11 @@ test_that("hill_pq works with data_fungi dataset", {
       letters = TRUE
     )
   )))
-  expect_equal(length(hill_pq(data_fungi_mini, "Height", add_points = TRUE)), 4)
-  expect_s3_class(hill_pq(data_fungi_mini, "Height", add_points = TRUE)[[1]], "ggplot")
+  expect_length(hill_pq(data_fungi_mini, "Height", add_points = TRUE), 4)
+  expect_s3_class(
+    hill_pq(data_fungi_mini, "Height", add_points = TRUE)[[1]],
+    "ggplot"
+  )
 })
 
 test_that("hill_pq works with GP dataset", {
@@ -65,7 +80,7 @@ test_that("hill_pq works with GP dataset", {
   expect_silent(suppressMessages(hill_pq(GP, "SampleType", add_points = TRUE)))
   expect_silent(suppressMessages(hill_pq(GP, "SampleType", letters = TRUE)))
   expect_silent(suppressMessages(hill_pq(GP, "SampleType", add_points = TRUE)))
-  expect_equal(length(hill_pq(GP, "SampleType", add_points = TRUE)), 4)
+  expect_length(hill_pq(GP, "SampleType", add_points = TRUE), 4)
   expect_s3_class(hill_pq(GP, "SampleType", add_points = TRUE)[[1]], "ggplot")
 })
 
@@ -73,16 +88,18 @@ test_that("iNEXT_pq works with data_fungi_mini dataset", {
   skip_on_cran()
   library("iNEXT")
   expect_s3_class(
-    suppressWarnings(res_iNEXT <- iNEXT_pq(
-      subset_taxa_pq(
-        data_fungi_mini,
-        taxa_sums(data_fungi_mini) > 5000
-      ),
-      merge_sample_by = "Height",
-      q = 1,
-      datatype = "abundance",
-      nboot = 5
-    )),
+    suppressWarnings(
+      res_iNEXT <- iNEXT_pq(
+        subset_taxa_pq(
+          data_fungi_mini,
+          taxa_sums(data_fungi_mini) > 5000
+        ),
+        merge_sample_by = "Height",
+        q = 1,
+        datatype = "abundance",
+        nboot = 5
+      )
+    ),
     "iNEXT"
   )
   expect_s3_class(suppressWarnings(ggiNEXT(res_iNEXT)), "ggplot")
@@ -93,8 +110,16 @@ test_that("iNEXT_pq works with data_fungi_mini dataset", {
 
 test_that("accu_plot works with GlobalPatterns dataset", {
   skip_on_cran()
-  expect_silent(suppressWarnings(accu_plot(GP_archae, fact = "X.SampleID", by.fact = TRUE)))
-  expect_silent(suppressWarnings(accu_plot(GP_archae, fact = "X.SampleID", by.fact = FALSE)))
+  expect_silent(suppressWarnings(accu_plot(
+    GP_archae,
+    fact = "X.SampleID",
+    by.fact = TRUE
+  )))
+  expect_silent(suppressWarnings(accu_plot(
+    GP_archae,
+    fact = "X.SampleID",
+    by.fact = FALSE
+  )))
   expect_silent(suppressWarnings(accu_plot(
     GP_archae,
     fact = "X.SampleID",
@@ -121,7 +146,8 @@ test_that("accu_plot works with GlobalPatterns dataset", {
 test_that("accu_plot works with data_fungi dataset", {
   skip_on_cran()
   expect_silent(accu_plot(data_basidio, fact = "Height", by.fact = TRUE))
-  expect_error(suppressWarnings(accu_plot(data_basidio,
+  expect_error(suppressWarnings(accu_plot(
+    data_basidio,
     fact = "Height",
     by.fact = FALSE
   )))
@@ -149,15 +175,65 @@ test_that("accu_plot works with data_fungi dataset", {
 
 test_that("accu_samp_threshold works with GlobalPatterns dataset", {
   skip_on_cran()
-  expect_s3_class(p <- accu_plot(GP_archae, "SampleType", add_nb_seq = TRUE, by.fact = TRUE, step = 10), "ggplot")
-  expect_equal(length(accu_samp_threshold(p)), 5)
+  expect_s3_class(
+    p <- accu_plot(
+      GP_archae,
+      "SampleType",
+      add_nb_seq = TRUE,
+      by.fact = TRUE,
+      step = 10
+    ),
+    "ggplot"
+  )
+  expect_length(accu_samp_threshold(p), 5)
+})
+
+test_that("hill_bar_pq works with data_fungi_mini dataset", {
+  expect_s3_class(
+    suppressMessages(hill_bar_pq(data_fungi_mini, Height, q = 0)),
+    "ggplot"
+  )
+  skip_on_cran()
+  # multiple q returns a patchwork
+  expect_s3_class(
+    suppressMessages(hill_bar_pq(data_fungi_mini, Height, q = c(0, 2))),
+    "patchwork"
+  )
+  # letters disabled
+  expect_s3_class(
+    suppressMessages(
+      hill_bar_pq(data_fungi_mini, Height, q = 0, add_letters = FALSE)
+    ),
+    "ggplot"
+  )
+  # no global significance -> all "a" (very low threshold)
+  expect_s3_class(
+    suppressMessages(
+      hill_bar_pq(data_fungi_mini, Height, q = 0, p_threshold = 1e-10)
+    ),
+    "ggplot"
+  )
+  # custom y labels
+  expect_s3_class(
+    suppressMessages(
+      hill_bar_pq(
+        data_fungi_mini,
+        Height,
+        q = c(0, 2),
+        y_labs = c(Hill_0 = "Richness", Hill_2 = "Simpson")
+      )
+    ),
+    "patchwork"
+  )
 })
 
 test_that("accu_samp_threshold works with data_fungi_mini dataset", {
   skip_on_cran()
-  expect_warning(ggb <-
-    ggbetween_pq(data_fungi_mini, "Time"))
-  expect_equal(length(ggb), 3)
+  expect_warning(
+    ggb <-
+      ggbetween_pq(data_fungi_mini, "Time")
+  )
+  expect_length(ggb, 3)
   expect_s3_class(ggbetween_pq(data_fungi_mini, fact = "Height")[[1]], "ggplot")
   expect_s3_class(
     ggbetween_pq(
@@ -169,8 +245,11 @@ test_that("accu_samp_threshold works with data_fungi_mini dataset", {
     )[[2]],
     "ggplot"
   )
-  expect_s3_class(ggbetween_pq(
-    data_fungi_mini,
-    fact = "Height"
-  )[[1]], "ggplot")
+  expect_s3_class(
+    ggbetween_pq(
+      data_fungi_mini,
+      fact = "Height"
+    )[[1]],
+    "ggplot"
+  )
 })

@@ -43,7 +43,7 @@ considered significant.}
 
 \item{sample.size}{(int) A single integer value equal to the number of
 reads being simulated, also known as the depth. See
-\code{\link[phyloseq:rarefy_even_depth]{phyloseq::rarefy_even_depth()}}.}
+\code{\link[phyloseq:rarefy_even_depth]{phyloseq::rarefy_even_depth()}} and \code{\link[=rarefy_even_depth_pq]{rarefy_even_depth_pq()}}.}
 
 \item{verbose}{(logical). If TRUE, print additional information.}
 
@@ -75,15 +75,9 @@ use this function.
 \examples{
 \donttest{
 if (requireNamespace("vegan")) {
-  data_fungi_woNA <- subset_samples(data_fungi, !is.na(Time) & !is.na(Height))
-  res_var_9 <- var_par_rarperm_pq(
-    data_fungi_woNA,
-    list_component = list(
-      "Time" = c("Time"),
-      "Size" = c("Height", "Diameter")
-    ),
-    nperm = 9,
-    dbrda_computation = TRUE
+  data_fungi_woNA <- subset_samples(
+    data_fungi_mini,
+    !is.na(Time) & !is.na(Height)
   )
   res_var_2 <- var_par_rarperm_pq(
     data_fungi_woNA,
@@ -95,6 +89,9 @@ if (requireNamespace("vegan")) {
     dbrda_computation = TRUE
   )
 }
+}
+\dontrun{
+plot_var_part_pq(res_var_2)
 }
 }
 \seealso{

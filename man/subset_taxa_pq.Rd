@@ -43,12 +43,13 @@ a new phyloseq object
 
 
 The main objective of this function is to complete the
-\code{\link[phyloseq:subset_taxa-methods]{phyloseq::subset_taxa()}} function by propose a more easy way of
+\code{\link[phyloseq:subset_taxa]{phyloseq::subset_taxa()}} function by propose a more easy way of
 subset_taxa using a named boolean vector. Names must match taxa_names.
 }
 \examples{
 
 subset_taxa_pq(data_fungi, data_fungi@tax_table[, "Phylum"] == "Ascomycota")
+subset_taxa_pq(data_fungi, taxa_sums(data_fungi) > 100)
 
 cond_taxa <- grepl("Endophyte", data_fungi@tax_table[, "Guild"])
 names(cond_taxa) <- taxa_names(data_fungi)

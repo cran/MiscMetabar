@@ -15,6 +15,7 @@ ggvenn_pq(
   add_nb_seq = FALSE,
   rarefy_before_merging = FALSE,
   rarefy_after_merging = FALSE,
+  rngseed = FALSE,
   return_data_for_venn = FALSE,
   verbose = TRUE,
   type = "nb_taxa",
@@ -53,6 +54,13 @@ modalities of args \code{fact}. Use \code{phyloseq::rarefy_even_depth()} functio
 \item{rarefy_after_merging}{Rarefy each sample after merging by the
 modalities of args \code{fact}.}
 
+\item{rngseed}{(Optional). A single integer value passed to
+\code{\link[phyloseq:rarefy_even_depth]{phyloseq::rarefy_even_depth()}}, which is used to fix a seed for
+reproducibly random number generation (in this case, reproducibly
+random subsampling). If set to FALSE, then no fiddling with the RNG seed
+is performed, and it is up to the user to appropriately call set.seed
+beforehand to achieve reproducible results. Default is FALSE.}
+
 \item{return_data_for_venn}{(logical, default FALSE) If TRUE, the plot is
 not returned, but the resulting dataframe to plot with ggVennDiagram package
 is returned.}
@@ -89,13 +97,13 @@ examples.
 }
 \examples{
 if (requireNamespace("ggVennDiagram")) {
-  ggvenn_pq(data_fungi, fact = "Height")
+  ggvenn_pq(data_fungi_mini, fact = "Height")
 }
 \donttest{
 if (requireNamespace("ggVennDiagram")) {
-  ggvenn_pq(data_fungi, fact = "Height") +
+  ggvenn_pq(data_fungi_mini, fact = "Height") +
     ggplot2::scale_fill_distiller(palette = "BuPu", direction = 1)
-  pl <- ggvenn_pq(data_fungi, fact = "Height", split_by = "Time")
+  pl <- ggvenn_pq(data_fungi_mini, fact = "Height", split_by = "Time")
   for (i in seq_along(pl)) {
     p <- pl[[i]] +
       scale_fill_distiller(palette = "BuPu", direction = 1) +
@@ -103,21 +111,27 @@ if (requireNamespace("ggVennDiagram")) {
     print(p)
   }
 
-  data_fungi2 <- subset_samples(data_fungi, data_fungi@sam_data$Tree_name == "A10-005" |
-    data_fungi@sam_data$Height \%in\% c("Low", "High"))
+  data_fungi2 <- subset_samples(
+    data_fungi_mini,
+    data_fungi_mini@sam_data$Tree_name == "A10-005" |
+      data_fungi_mini@sam_data$Height \%in\% c("Low", "High")
+  )
   ggvenn_pq(data_fungi2, fact = "Height")
 
   ggvenn_pq(data_fungi2, fact = "Height", type = "nb_seq")
 
-  ggvenn_pq(data_fungi, fact = "Height", add_nb_seq = TRUE, set_size = 4)
-  ggvenn_pq(data_fungi, fact = "Height", rarefy_before_merging = TRUE)
-  ggvenn_pq(data_fungi, fact = "Height", rarefy_after_merging = TRUE) +
+  ggvenn_pq(data_fungi_mini, fact = "Height", add_nb_seq = TRUE, set_size = 4)
+  ggvenn_pq(data_fungi_mini, fact = "Height", rarefy_before_merging = TRUE)
+  ggvenn_pq(data_fungi_mini, fact = "Height", rarefy_after_merging = TRUE) +
     scale_x_continuous(expand = expansion(mult = 0.5))
 
   # For more flexibility, you can save the dataset for more precise construction
   # with ggplot2 and ggVennDiagramm
   # (https://gaospecial.github.io/ggVennDiagram/articles/fully-customed.html)
-  res_venn <- ggvenn_pq(data_fungi, fact = "Height", return_data_for_venn = TRUE)
+  res_venn <- ggvenn_pq(data_fungi_mini,
+    fact = "Height",
+    return_data_for_venn = TRUE
+  )
 
   ggplot() +
     # 1. region count layer
